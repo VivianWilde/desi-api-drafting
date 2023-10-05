@@ -1,0 +1,124 @@
+#+title: Api
+Planning for the API, data model etc.
+* Questions
+** General Implementation
+How stable is the data structure, i.e how likely is DESI to change/extend the file structure in the near future?
+
+My understanding is that there's no underlying database (i.e SQL or anything), it's just flat FITS files stored in a highly nested/structured manner, and each FITS file is basically a collection of tables with standard format/structure and some metadata attached to each table, and we use our `Spectra' object as an abstraction around this. Is that correct, or is there anything I'm misunderstanding?
+** RADEC Endpoint
+Off the top of my head, the most obvious way to implement it is to read in all of the rows from =zall-pix*.fits= (selecting only the =TARGET_ID, TARGET_RA, TARGET_DEC= columns) and keep rows where the distance to the requested =(RA, DEC)= is less than =RADIUS_ARCSEC=, and then hand it off to a subroutine to get spectra for each target id.
+
+I'm still getting a handle on the scale of the data involved here, so I wanted to ask if reading and filtering all the rows from =zall-pix*.fits= (including running basic arithmetic on them as part of the filter) is feasible from a performance perspective? If not, we can try to think of more effective ways of handling this endpoint.
+
+** Underlying abstraction
+As I understand it every API response looks like a file derived from a `Spectra' object - either an image file with a plot of the spectra, or a FITS file containing the data from the spectra.
+Is my understanding correct, and also is this likely to remain true as we extend the API?
+If it is, then I think we can separate the code into
+a) a top-level layer which accepts API requests, calls a subroutine to build a Spectra object, translates that object to a file of some kind (based on whether the request was download/plot) and sends back the resulting file over the network
+b) a module that uses desispec utils to do file reading + slicing/selection, including stuff like mapping edr -> fuji. Basically, most knowledge of the DESI data model lives here.
+c) a module to do complicated work with Spectra objects.
+** Extensibility
+Currently the flow looks like: someone accesses one of the three endpoints we specified -> we give them back either a FITS file or an image file.
+
+At a high level, any other major features we think it's important to build into the API? For instance, some kind of web viewer for the plots, authentication, etc.?
+Obviously I'll make sure the implementation is as extensible as possible, but if there are concrete extensions we want to accomodate I'll plan explicitly for those.
+** Cacheing and Cleanup
+Since our responses currently look like files (whether FITS or HTML or image), I was imagining we could save each response file to =$CACHE_DIR/<api-call-parameters>/<request timestamp>=.
+That way when a new API call is made, we can just:
+- Check if something exists at the relevant path. If not, proceed with building the file.
+- Check if the existing thing is sufficiently recent (we can define an arbitrary cutoff). If not, delete the old file and proceed with building the new one.
+We can also have a low-priority cron job to just =rm -rf $CACHE_DIR= run however often we want.
+** Limiting Response Size
+One way to do this is pagination, although this might be tedious since our data is FITS files and I'm not sure how `naturally' they paginate.
+
+If we know the typical size of the data, we can just set a maximum for request parameters like the size of the =radius= param or the number of target ids, and add a validation check to send back a descriptive error on invalid requests.
+
+* Endpoints
+All endpoints specify a release first like `daily' or the special name of a release.
+** Tile
+=tile/<tile-id>/<fibers>=
+Select a tile folder, latest date, extract the relevant PETAL file names based on the <fibers>. Read each file into a Spectra, keep the ones matching requested fibers, and =stack= them.
+# TODO: Look at the structure of FITS files and petal files specifically. So do we need to flat-concat the files, or can we do clever things with pulling out individual tables.
+
+** Targets
+=targets/<target-ids>=
+Read a FITS to get the Healpix, Survey, Program for each target. That is sufficient to get a file path to a FITS file for each target
+
+Then, simply read each file using read_spectra, restrict to the relevant target_ids, and stack them all.
+Do some grouping so targets with the same file are pulled in a single read
+
+Some intricacies - the filename depends on the release sometimes, it seems. Annoying.
+
+** Radec
+=radec/<ra,dec,radius>=
+So select a point in the sky and a radius around it.
+The zall-pix-<release>.fits is the core metadata, it seems.
+This one seems iffy, geometry required, some actual algorithms.
+
+So we are given a point and radius, we are interested in all targets within that radius.
+
+* Methods
+** Download
+** Plot
+* Overview
+The ideal separation looks like:
+** Assemble the data
+*** Find the right files
+*** Implementation knowledge
+What parts of what files to extract.
+This is just a set of calls to =read_spectra= to extract relevant rows and blindly pass them on.
+
+**** FITS files - select columns
+**** Queries to apply to get rows
+Applied in =read_spectra=
+*** Consolidate
+- Execute the `query' assembled by the domain knowledge
+- Builds a Spectra object
+
+
+** Download
+- Write the spectra to a tmp file
+** Plot
+- Write the plot to a tmp file
+** Serve
+- Takes a file path and sends it back over the wire.
+-
+** Top-level
+Top-level routine.
+- Accepts params
+- Checks cache for existing
+- Save timestamp of request
+- Dispatch to utility to actually build spectra
+- Takes returned spectra. Either build a fits file or a plot.png from it, and put it in the right place in /cache
+- Return the filename
+* Details
+** Error-handing
+* Sqlite DB
+- Stephen's suggestion is to maintain a sqlite DB that reflects the zall.fits for each `frozen' release.
+- How would this work?
+** Requirements
+- Build a DB
+- Mechanically, use python's internal model of fits as our intermediate
+- Can we cheese? https://github.com/noaodatalab-user/fits2db
+- Damn, last commit 2018. Maybe not.
+- Possibly filter cols/rows
+- Rebuild on-demand
+- Periodically sync/sanity check
+- Generic: Build from new releases as well.
+- Ideally: Automated pipeline to build but that's far-future
+- Fallback - if this fails or is ambiguous somehow, try to read straight from FITS
+- Encapsulate the fallback - the actual endpoint handler should just call `get-stuff-from-zall' and have that do everything it can.
+-
+* TODO
+- Set up venv
+- Review tutorial
+-
+
+
+* Testing on NERSC
+- Just run from the Jupyter notebook.
+- Should have DESI access from my notebook
+- They have SSH access.
+- So ssh in to NERSC, clone the git repo I'm working with
+- Also set up emacs CLI in there. Emacs is on, clone dotfiles, install doom
+- Jupyterhub lets you do terminals as well, but eww.
