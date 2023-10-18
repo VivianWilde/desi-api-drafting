@@ -122,3 +122,43 @@ Top-level routine.
 - So ssh in to NERSC, clone the git repo I'm working with
 - Also set up emacs CLI in there. Emacs is on, clone dotfiles, install doom
 - Jupyterhub lets you do terminals as well, but eww.
+* Parameter parsing
+** Reading
+- There have to be standards for this, come on.
+
+** Ideas
+- Define a ParameterObject union type?
+- Union of one dataclass per endpoint.
+- Empty class =ParameterObject=
+- Subclasses for actual content
+* Notes from the Slice/Dice
+- read_spectra(filename)
+- write_spectra(outfile, spectra)
+- .num_spectra to check size
+- desispec.io.find_file
+
+
+We can do NP-style complex logical filters and maps
+#+begin_src python
+keep = spectra.fibermap['FIBER'] % 50 == 0
+subset1 = spectra[keep]
+
+focalplane_radius = np.sqrt(subset1.fibermap['MEAN_FIBER_X']**2 + subset1.fibermap['MEAN_FIBER_Y']**2)
+subset1.fibermap['FOCALPLANE_RADIUS'] = focalplane_radius
+#+end_src
+
+#+begin_src python
+zcat = fitsio.read(zcatfile, 'ZCATALOG', columns=('TARGETID', 'TILEID', 'LASTNIGHT', 'PETAL_LOC', 'SPECTYPE', 'Z', 'ZWARN', 'FLUX_G'))
+
+for tileid, night, petal in np.unique(bright_qso_zcat['TILEID', 'LASTNIGHT', 'PETAL_LOC']):
+    coaddfile = desispec.io.findfile('coadd', tile=tileid, night=night, spectrograph=petal,
+                                     groupname='cumulative')
+    spectra = desispec.io.read_spectra(coaddfile, targetids=bright_qso_zcat['TARGETID'])
+    spectra_camcoadd = coadd_cameras(spectra)
+    spectra_list.append(spectra_camcoadd)
+
+#+end_src
+* Docs
+#+begin_src python
+desispec.io.meta.findfile(filetype, night=None, expid=None, camera=None, tile=None, groupname=None, healpix=None, nside=64, band=None, spectrograph=None, survey=None, faprogram=None, rawdata_dir=None, specprod_dir=None, download=False, outdir=None, qaprod_dir=None, return_exists=False, readonly=False, logfile=False)[source]¶
+#+end_src
