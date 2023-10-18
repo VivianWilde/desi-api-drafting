@@ -1,7 +1,7 @@
 #!/usr/bin/env ptpython
 from build_spectra import *
 from models import *
-from webapp import *
+# from webapp import *
 
 def test_tile():
     params = TileParameters(tile=80605, fibers=[10, 234, 2761, 3951])
@@ -12,5 +12,6 @@ def test_tile():
         params=params,
     )
     result = handle(req)
-    assert sorted(result['FIBER'])=[10,234,2761,3951]
-    return result
+    assert sorted(result['FIBER'])==[10,234,2761,3951]
+
+ test_tile()
