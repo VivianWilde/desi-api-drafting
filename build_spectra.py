@@ -23,7 +23,6 @@ def handle(req: ApiRequest) -> Spectra:
     # TODO: Ask about setup details, like language version so if I can use match/case
 
 
-
 def canonise_release_name(release: str) -> str:
     """
     # Other options for "fuji" would be "daily" or "iron", and as special cases map data release names to production names "edr" -> "fuji" and "dr1" -> "iron".
@@ -35,7 +34,6 @@ def canonise_release_name(release: str) -> str:
     if release in translations.keys():
         return translations[release]
     raise InvalidReleaseException
-
 
 
 def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra:
@@ -67,20 +65,22 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
     :param fibers: Fibers within the tile being requested
     :returns: The result of reading Spectra from all of those fibers
     """
-    folder = f"{release.directory}/tiles/cumulative/{tile}" # TODO Consider abstracting these?
+    folder = f"{release.directory}/tiles/cumulative/{tile}"  # TODO Consider abstracting these?
     latest = max(os.listdir(folder))
-    print(folder)
-    print(latest)
 
-    spectra = desispec.io.read_tile_spectra(tile, latest, fibers=fibers, coadd=True, redrock=False, specprod=release.name, group='cumulative')
+    spectra = desispec.io.read_tile_spectra(
+        tile,
+        latest,
+        fibers=fibers,
+        coadd=True,
+        redrock=False,
+        specprod=release.name,
+        group="cumulative",
+    )
     if isinstance(spectra, Tuple):
         return spectra[0]
     else:
         return spectra
-    # Read all into a single spectra.
-    # Filter: Where FIBERID in List
-    # TODO: Review file slicing/dicing rules
-    # TODO: replace path stuff with desi utilities
 
 
 def targets(release: DataRelease, target_ids: List[int]) -> Spectra:
@@ -109,11 +109,4 @@ def read_targets(release: DataRelease) -> List[Target]:
     # TODO: Something with fits-ing the self.healpix file
     pass
 
-def main():
-    params=TileParameters(tile=80605, fibers=[10,234,2761,3951])
-    req = ApiRequest(command=Command.DOWNLOAD, request_type=RequestType.TILE, release="fuji", params=params)
-    result = handle(req)
-    return result
 
-
-result=main()
