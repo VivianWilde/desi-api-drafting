@@ -11,4 +11,6 @@ def test_tile():
         release="fuji",
         params=params,
     )
-    return handle(req)
+    result = handle(req)
+    assert sorted(result['FIBER'])=[10,234,2761,3951]
+    return result
