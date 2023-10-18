@@ -12,6 +12,7 @@ def test_tile():
         params=params,
     )
     result = handle(req)
-    assert sorted(result['FIBER'])==[10,234,2761,3951]
+    print(result.fibermap['FIBER', 'TARGETID'])
+    assert sorted(result.fibermap['FIBER'])==[10,234,2761,3951]
 
- test_tile()
+test_tile()
