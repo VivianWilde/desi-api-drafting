@@ -33,6 +33,28 @@ class RequestType(Enum):
     TARGETS = 2
     RADEC = 3
 
+class Parameters:
+    pass
+
+
+@dataclass
+class RadecParameters(Parameters):
+    ra: float
+    dec: float
+    radius: float
+
+
+@dataclass
+class TileParameters(Parameters):
+    tile: int
+    fibers: List[int]
+
+
+@dataclass
+class TargetParameters(Parameters):
+    target_ids: List[int]
+
+
 
 @dataclass()
 class ApiRequest:
@@ -84,23 +106,3 @@ class DataRelease:
         self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
 
 
-class Parameters:
-    pass
-
-
-@dataclass
-class RadecParameters(Parameters):
-    ra: float
-    dec: float
-    radius: float
-
-
-@dataclass
-class TileParameters(Parameters):
-    tile: int
-    fibers: List[int]
-
-
-@dataclass
-class TargetParameters(Parameters):
-    target_ids: List[int]

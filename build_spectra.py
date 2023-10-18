@@ -1,5 +1,4 @@
 #!/usr/bin/env ipython3
-from pathlib import Path
 import os
 import desispec.io, desispec.spectra
 from math import sqrt
@@ -70,8 +69,10 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
     """
     folder = f"{release.directory}/tiles/cumulative/{tile}" # TODO Consider abstracting these?
     latest = max(os.listdir(folder))
+    print(folder)
+    print(latest)
 
-    spectra = desispec.io.read_tile_spectra(tile, latest, fibers=fibers)
+    spectra = desispec.io.read_tile_spectra(tile, latest, fibers=fibers, coadd=True, redrock=False, specprod=release.name, group='cumulative')
     if isinstance(spectra, Tuple):
         return spectra[0]
     else:
@@ -107,3 +108,12 @@ def retrieve_target_spectra(
 def read_targets(release: DataRelease) -> List[Target]:
     # TODO: Something with fits-ing the self.healpix file
     pass
+
+def main():
+    params=TileParameters(tile=80605, fibers=[10,234,2761,3951])
+    req = ApiRequest(command=Command.DOWNLOAD, request_type=RequestType.TILE, release="fuji", params=params)
+    result = handle(req)
+    return result
+
+
+result=main()
