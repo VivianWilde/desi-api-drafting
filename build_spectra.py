@@ -52,12 +52,9 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     all_targets = retrieve_targets(release)
 
     def distfilter(target: Target) -> bool:
-        # TODO units
         return sqrt((ra - target.ra) ** 2 + (dec - target.dec) ** 2) <= radius
 
-    relevant_targets = [
-        target for target in all_targets if distfilter(target)
-    ]  # TODO numpy syntax
+    relevant_targets = [t for t in alltargets if distfilter(t)] # TODO probably inefficient
     spectra = retrieve_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
@@ -109,11 +106,10 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
             "TARGET_DEC",
         ],
     )
-    keep = ((zcat["ZCAT_PRIMARY"] == True) & (zcat["TARGETID"] in target_ids)) if len(target_ids) else (zcat["ZCAT_PRIMARY"] == True)
+    keep = ((zcat["ZCAT_PRIMARY"] == True) &  np.isin(zcat["TARGETID"],target_ids)) if len(target_ids) else (zcat["ZCAT_PRIMARY"] == True)
     zcat = zcat[keep]
     targets = []
     for target in zcat:
-        print(target)
         targets.append(
             Target(
                 target_id=target["TARGETID"],
@@ -125,6 +121,7 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
                 dec=target["TARGET_DEC"],
             )
         )
+    print(targets)
     return targets
 
 
@@ -143,8 +140,8 @@ def retrieve_target_spectra(
             healpix=target.healpix,
             specprod_dir=release.directory,
         )
-        print(source_file)
-        target_spectra.append(
-            desispec.io.read_spectra(source_file, targetids=[target.target_id])
-        )
+        # print(source_file)
+        print(type(target.target_id))
+        spectra = desispec.io.read_spectra(source_file, targetids=[target.target_id])
+        target_spectra.append(spectra)
     return target_spectra
