@@ -5,6 +5,8 @@ from math import sqrt
 from typing import List, Tuple
 from models import *
 from desispec.spectra import Spectra
+import fitsio
+import numpy as np
 
 # TODO: Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.
@@ -19,7 +21,9 @@ def handle(req: ApiRequest) -> Spectra:
     release = DataRelease(canonised)
     params = req.params
     if req.request_type == RequestType.TILE:
-        return tile(release, params.tile, params.fibers)
+        return tile(release, params.tile , params.fibers)
+    elif req.request_type == RequestType.TARGETS:
+        return targets(release, params.target_ids)
     # TODO: Ask about setup details, like language version so if I can use match/case
 
 
@@ -45,7 +49,7 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
     :returns: A combined Spectra of all such objects in the data release
     """
-    all_targets = read_targets(release)
+    all_targets = retrieve_targets(release)
 
     def distfilter(target: Target) -> bool:
         # TODO units
@@ -88,25 +92,59 @@ def targets(release: DataRelease, target_ids: List[int]) -> Spectra:
     return desispec.spectra.stack(retrieve_target_spectra(release, target_objects))
 
 
-def retrieve_targets(release: DataRelease, target_ids: List[int]) -> List[Target]:
-    return []
+def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[Target]:
+    # If the list of target_ids is empty, return all targets
+    zcatfile = release.healpix_fits
+    # desispec.io.read_table(database)
+    zcat = fitsio.read(
+        zcatfile,
+        "ZCATALOG",
+        columns=[
+            "TARGETID",
+            "HEALPIX",
+            "SURVEY",
+            "PROGRAM",
+            "ZCAT_PRIMARY",
+            "TARGET_RA", # We don't always need these, but save them so we can reuse this function. Maybe make it optional if this has high overhead.
+            "TARGET_DEC",
+        ],
+    )
+    keep = ((zcat["ZCAT_PRIMARY"] == True) & (zcat["TARGETID"] in target_ids)) if len(target_ids) else (zcat["ZCAT_PRIMARY"] == True)
+    zcat = zcat[keep]
+    targets = []
+    for target in zcat:
+        print(target)
+        targets.append(
+            Target(
+                target_id=target["TARGETID"],
+                healpix=target["HEALPIX"],
+                survey=target["SURVEY"],
+                program=target["PROGRAM"],
+                zcat_primary=target["ZCAT_PRIMARY"],
+                ra=target["TARGET_RA"],
+                dec=target["TARGET_DEC"],
+            )
+        )
+    return targets
+
 
 
 def retrieve_target_spectra(
+        # Unoptimised: Reads one file per target, no grouping of targets, so may read same file several times.
     release: DataRelease, targets: List[Target]
 ) -> List[Spectra]:
     target_spectra = []
     for target in targets:
-        target_file = release.directory / Path(
-            f"healpix/{target.healpix_group}/{target.healpix}/{target.survey}/{target.program}/coadd-{target.survey}-{target.program}-{target.healpix}.fits"
+        source_file = desispec.io.findfile(
+            "coadd",
+            survey=target.survey,
+            faprogram=target.program,
+            groupname="healpix",
+            healpix=target.healpix,
+            specprod_dir=release.directory,
         )
-        target_spectra.append(desispec.io.read_spectra(target_file.as_posix()))
-        # TODO use desi utils
+        print(source_file)
+        target_spectra.append(
+            desispec.io.read_spectra(source_file, targetids=[target.target_id])
+        )
     return target_spectra
-
-
-def read_targets(release: DataRelease) -> List[Target]:
-    # TODO: Something with fits-ing the self.healpix file
-    pass
-
-
