@@ -1,0 +1,17 @@
+(myenv) vivien@perlmutter:login02:~/desi/desi-api-drafting> python3 testing.py
+INFO:spectra.py:291:read_spectra: iotime 0.679 sec to read coadd-0-80605-thru20210205.fits at 2023-10-18T16:43:59.362536
+INFO:spectra.py:291:read_spectra: iotime 0.732 sec to read coadd-1-80605-thru20210205.fits at 2023-10-18T16:44:00.422388
+INFO:spectra.py:291:read_spectra: iotime 0.803 sec to read coadd-2-80605-thru20210205.fits at 2023-10-18T16:44:01.534819
+INFO:spectra.py:291:read_spectra: iotime 0.942 sec to read coadd-3-80605-thru20210205.fits at 2023-10-18T16:44:02.794952
+INFO:spectra.py:291:read_spectra: iotime 0.729 sec to read coadd-4-80605-thru20210205.fits at 2023-10-18T16:44:03.832693
+INFO:spectra.py:291:read_spectra: iotime 0.475 sec to read coadd-5-80605-thru20210205.fits at 2023-10-18T16:44:04.615840
+INFO:spectra.py:291:read_spectra: iotime 0.547 sec to read coadd-6-80605-thru20210205.fits at 2023-10-18T16:44:05.521459
+INFO:spectra.py:291:read_spectra: iotime 0.512 sec to read coadd-7-80605-thru20210205.fits at 2023-10-18T16:44:06.339035
+INFO:spectra.py:291:read_spectra: iotime 0.773 sec to read coadd-8-80605-thru20210205.fits at 2023-10-18T16:44:07.421068
+INFO:spectra.py:291:read_spectra: iotime 0.619 sec to read coadd-9-80605-thru20210205.fits at 2023-10-18T16:44:08.345266
+FIBER      TARGETID
+----- ------------------
+   10 616088398884504737
+  234 616088404899136262
+ 2761 616088459131487242
+ 3951  39627676687800263

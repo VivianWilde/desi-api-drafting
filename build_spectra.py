@@ -24,7 +24,8 @@ def handle(req: ApiRequest) -> Spectra:
         return tile(release, params.tile , params.fibers)
     elif req.request_type == RequestType.TARGETS:
         return targets(release, params.target_ids)
-    # TODO: Ask about setup details, like language version so if I can use match/case
+    elif req.request_type == RequestType.RADEC:
+        return radec(release, params.ra, params.dec, params.radius)
 
 
 def canonise_release_name(release: str) -> str:
@@ -49,12 +50,12 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
     :returns: A combined Spectra of all such objects in the data release
     """
-    all_targets = retrieve_targets(release)
+    targets = retrieve_targets(release)
 
     def distfilter(target: Target) -> bool:
         return sqrt((ra - target.ra) ** 2 + (dec - target.dec) ** 2) <= radius
 
-    relevant_targets = [t for t in alltargets if distfilter(t)] # TODO probably inefficient
+    relevant_targets = [t for t in targets if distfilter(t)] # TODO probably inefficient
     spectra = retrieve_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
