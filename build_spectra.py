@@ -13,15 +13,18 @@ import numpy as np
 
 
 def handle(req: ApiRequest) -> Spectra:
-    # ignore command
-    # select relevant folder based on release
-    # switch-case on request_type
-    # dispatch to function accordingly
+    """
+    Interpret an API Request, construct and return the relevant spectra. Basic entry point of this module.
+
+    :param req: A parsed/structured API Request constructing from a network request
+    :returns: Spectra object from which to construct a response
+    """
+
     canonised = canonise_release_name(req.release)
     release = DataRelease(canonised)
     params = req.params
     if req.request_type == RequestType.TILE:
-        return tile(release, params.tile , params.fibers)
+        return tile(release, params.tile, params.fibers)
     elif req.request_type == RequestType.TARGETS:
         return targets(release, params.target_ids)
     elif req.request_type == RequestType.RADEC:
@@ -30,8 +33,13 @@ def handle(req: ApiRequest) -> Spectra:
 
 def canonise_release_name(release: str) -> str:
     """
-    # Other options for "fuji" would be "daily" or "iron", and as special cases map data release names to production names "edr" -> "fuji" and "dr1" -> "iron".
+    Helper function to canonise the release name and error if a release name is invalid.
+
+    :param release: Not-necessarily-canonical name of a Data Release
+    :returns: Canonised name which maps to a directory
+
     """
+    # TODO This is kind of gross, we should really have this live outside the code in a json or something, or pulled directly?
     allowed = ["fuji", "iron", "daily"]
     translations = {"edr": "fuji", "dr1": "iron"}
     if release in allowed:
@@ -45,6 +53,7 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     """
     Find all objects within RADIUS of the point (RA, DEC), combine and return their spectra
 
+    :param release: The data release to use as a data source
     :param ra: Right Ascension of the target point
     :param dec: Declination of the target point
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
@@ -55,19 +64,23 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     def distfilter(target: Target) -> bool:
         return sqrt((ra - target.ra) ** 2 + (dec - target.dec) ** 2) <= radius
 
-    relevant_targets = [t for t in targets if distfilter(t)] # TODO probably inefficient
+    relevant_targets = [
+        t for t in targets if distfilter(t)
+    ]  # TODO probably inefficient
     spectra = retrieve_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
 
 def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
-    """Combine spectra from specified FIBERS within a TILE and return it
+    """
+    Combine spectra from specified FIBERS within a TILE and return it
 
+    :param release: The data release to use as a data source
     :param tile: Index of tile to access
     :param fibers: Fibers within the tile being requested
-    :returns: The result of reading Spectra from all of those fibers
+    :returns: A combined Spectra containing the spectra of all specified fibers
     """
-    folder = f"{release.directory}/tiles/cumulative/{tile}"  # TODO Consider abstracting these?
+    folder = f"{release.directory}/tiles/cumulative/{tile}"
     latest = max(os.listdir(folder))
 
     spectra = desispec.io.read_tile_spectra(
@@ -86,14 +99,27 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
 
 
 def targets(release: DataRelease, target_ids: List[int]) -> Spectra:
+    """
+    Combine spectra of all target objects with the specified TARGET_IDs and return the result
+
+    :param release: The data release to use as a data source
+    :param target_ids: The list of target identifiers to search for
+    :returns: A Spectra object combining individual spectra for all targets
+    """
+
     target_objects = retrieve_targets(release, target_ids)
     return desispec.spectra.stack(retrieve_target_spectra(release, target_objects))
 
 
-def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[Target]:
-    # If the list of target_ids is empty, return all targets
+def retrieve_targets(release: DataRelease, target_ids: List[int]) -> List[Target]:
+    """
+    For each TARGET_ID, read the corresponding target metadata into a Target object.
+
+    :param release: The data release to use as a data source
+    :param target_ids: The list of target identifiers to build objects for. If this list is empty, blindly reads all targets
+    :returns: A list of target objects, each containing metadata for a target with a specified target_id
+    """
     zcatfile = release.healpix_fits
-    # desispec.io.read_table(database)
     zcat = fitsio.read(
         zcatfile,
         "ZCATALOG",
@@ -103,11 +129,16 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
             "SURVEY",
             "PROGRAM",
             "ZCAT_PRIMARY",
-            "TARGET_RA", # We don't always need these, but save them so we can reuse this function. Maybe make it optional if this has high overhead.
+            # We don't always need these, but save them so we can reuse this function. Maybe make it optional if this has high overhead.
+            "TARGET_RA",
             "TARGET_DEC",
         ],
     )
-    keep = ((zcat["ZCAT_PRIMARY"] == True) &  np.isin(zcat["TARGETID"],target_ids)) if len(target_ids) else (zcat["ZCAT_PRIMARY"] == True)
+    keep = (
+        ((zcat["ZCAT_PRIMARY"] == True) & np.isin(zcat["TARGETID"], target_ids))
+        if len(target_ids)
+        else (zcat["ZCAT_PRIMARY"] == True)
+    )
     zcat = zcat[keep]
     targets = []
     for target in zcat:
@@ -122,15 +153,18 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
                 dec=target["TARGET_DEC"],
             )
         )
-    print(targets)
     return targets
 
 
+def retrieve_target_spectra(release: DataRelease, targets: List[Target]) -> List[Spectra]:
+    """
+    Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list.
 
-def retrieve_target_spectra(
-        # Unoptimised: Reads one file per target, no grouping of targets, so may read same file several times.
-    release: DataRelease, targets: List[Target]
-) -> List[Spectra]:
+    :param release: The data release to use as a data source
+    :param targets: A list of Target objects
+    :returns: A list of Spectra objects, one for each target passed in
+    """
+    # Unoptimised: Reads one file per target, no grouping of targets, so may read same file several times.
     target_spectra = []
     for target in targets:
         source_file = desispec.io.findfile(
@@ -141,8 +175,6 @@ def retrieve_target_spectra(
             healpix=target.healpix,
             specprod_dir=release.directory,
         )
-        # print(source_file)
-        print(type(target.target_id))
         spectra = desispec.io.read_spectra(source_file, targetids=[target.target_id])
         target_spectra.append(spectra)
     return target_spectra

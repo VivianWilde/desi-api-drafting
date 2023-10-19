@@ -162,3 +162,46 @@ for tileid, night, petal in np.unique(bright_qso_zcat['TILEID', 'LASTNIGHT', 'PE
 #+begin_src python
 desispec.io.meta.findfile(filetype, night=None, expid=None, camera=None, tile=None, groupname=None, healpix=None, nside=64, band=None, spectrograph=None, survey=None, faprogram=None, rawdata_dir=None, specprod_dir=None, download=False, outdir=None, qaprod_dir=None, return_exists=False, readonly=False, logfile=False)[source]¶
 #+end_src
+* TODO <2023-10-18 Wed>
+** Questions
+- Should we do partial cacheing? No, we should not, it is simply not worth the effort.
+- Overhead of reading RA/DEC?
+*** How do we catch/log/report errors?
+- No comments on webapp
+- Inside the spectra module: Fail early, raise an exception. So looks go-style. So raise as early as possible, as informative as possible.
+- For webapp: Send an error response to user, log it to stdout, raise an exception. Wrap this all in a function, somehow.
+- Have  a func that does logging/etc. and returns an exception, and then =raise= that.
+
+*** How to read Daily, without a zcatalog? Use the csv?
+- Think about this later
+- Look into sqlite
+- RADEC can be done from csv kind of.
+** Radec
+- In principle I have a working impl, test it.
+** Error-handling
+- Catch user errors carefully
+- For internal errors, have catches in the top-level handlers in the relevant module
+- Catch errors, log them, respond with a traceback
+** Testing - edge cases
+*** How to interpret outputs for testing:
+- Trivial: Check if it's pulled out the correct line
+- Sanity-check unit tests: Run without crashing, produce nonempty files, etc.
+- Do low-bar testing: Does it return any rows, etc.
+- So do manual testing to check content, on bug write unit test that will catch it if it regresses, or anything.
+- So catch breaking changes early
+** Testing - more than sanity
+** Webapp side
+- All of this, really
+** Sqlite idea
+** Dockerization stuff
+** Daily
+** Optimisation
+- Don't read the same file multiple times
+- Ask: Overhead of reading RA/DEC?
+** Cacheing
+Should we do partial cacheing? No, we should not, it is simply not worth the effort.
+* TODO <2023-10-19 Thu>
+- Work on a user guide, send to Stephen over email and add to github.
+- Corollary
+- Next steps: RADEC + webapp
+- Webapp testing:

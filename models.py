@@ -97,7 +97,6 @@ class DataRelease:
     healpix_fits: str
     sqlite_file: str
 
-    # NOTE: the fits for tiles vs for healpix are different, so capture that fact.
     def __init__(self, name: str) -> None:
         self.name = name
         self.directory = f"{DESIROOT}/{self.name}"
