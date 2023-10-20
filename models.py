@@ -8,7 +8,7 @@ import os
 
 # Models and constants
 
-SQL_DIR = "/home/vivien/desi-sql"
+SQL_DIR = f"{os.getenv('home')}/desi-sql"
 DESIROOT= os.getenv("DESIROOT") or "/global/cfs/cdirs/desi/spectro/redux"
 
 
@@ -93,6 +93,7 @@ class Target:
 class DataRelease:
     name: str
     directory: str
+    tile_dir: str
     tile_fits: str
     healpix_fits: str
     sqlite_file: str
@@ -101,6 +102,7 @@ class DataRelease:
         self.name = name
         self.directory = f"{DESIROOT}/{self.name}"
         self.tile_fits = f"{self.directory}/zcatalog/zall-tilecumulative-{self.name}.fits"
+        self.tile_dir = f"{self.directory}/tiles/cumulative"
         self.healpix_fits = f"{self.directory}/zcatalog/zall-pix-{self.name}.fits"
         self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
 

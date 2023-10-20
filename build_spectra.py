@@ -80,7 +80,7 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
     :param fibers: Fibers within the tile being requested
     :returns: A combined Spectra containing the spectra of all specified fibers
     """
-    folder = f"{release.directory}/tiles/cumulative/{tile}"
+    folder = f"{release.tile_dir}/{tile}"
     latest = max(os.listdir(folder))
 
     spectra = desispec.io.read_tile_spectra(

@@ -48,7 +48,6 @@ Then, simply read each file using read_spectra, restrict to the relevant target_
 Do some grouping so targets with the same file are pulled in a single read
 
 Some intricacies - the filename depends on the release sometimes, it seems. Annoying.
-
 ** Radec
 =radec/<ra,dec,radius>=
 So select a point in the sky and a radius around it.

@@ -1,0 +1,21 @@
+#+title: README / User Guide
+* Background
+The entrypoint function =handle= takes an =ApiRequest= as an input - it automatically figures out release info such as paths to files from this.
+
+Here's an example of constructing a request
+#+begin_src python
+    params = TargetParameters(target_ids=targets)
+    req = ApiRequest(
+        command=Command.DOWNLOAD,
+        request_type=RequestType.TARGETS,
+        release="fuji",
+        params=params,
+    )
+#+end_src
+Then calling =handle(req)= produces a =Spectra= object produced by various calls to =read_spectra=, =stack=, etc.
+
+The =test_*= functions (in testing.py) call the =handle= function to produce a Spectra, run basic sanity checks on its structure, and then return the Spectra object.
+* Extra Context/Info
+- We use objects =TargetParameters=, =TileParameters=, =RadecParameters= to store the parameters. They're just dataclasses wrapping the obvious fields.
+- The =DESIROOT= is defined in =models.py=, it tries to read from the environment variable =$DESIROOT=
+- You can also call any of the endpoint functions =tile, target, radec= with arguments directly, without going through =handle= (although this may break things if we add validation, etc. in =handle= which may happen)

@@ -17,6 +17,7 @@ def test_tile():
     result = handle(req)
     print(result.fibermap["FIBER", "TARGETID"])
     assert sorted(result.fibermap["FIBER"]) == sorted(fibers)
+    return result
 
 
 def test_target():
@@ -36,6 +37,7 @@ def test_target():
     result = handle(req)
     print(result.fibermap["TARGETID"])
     assert sorted(result.fibermap["TARGETID"]) == sorted(targets)
+    return result
 
 
 test_target()
