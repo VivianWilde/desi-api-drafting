@@ -161,6 +161,7 @@ for tileid, night, petal in np.unique(bright_qso_zcat['TILEID', 'LASTNIGHT', 'PE
 #+begin_src python
 desispec.io.meta.findfile(filetype, night=None, expid=None, camera=None, tile=None, groupname=None, healpix=None, nside=64, band=None, spectrograph=None, survey=None, faprogram=None, rawdata_dir=None, specprod_dir=None, download=False, outdir=None, qaprod_dir=None, return_exists=False, readonly=False, logfile=False)[source]¶
 #+end_src
+
 * TODO <2023-10-18 Wed>
 ** Questions
 - Should we do partial cacheing? No, we should not, it is simply not worth the effort.
@@ -204,3 +205,49 @@ Should we do partial cacheing? No, we should not, it is simply not worth the eff
 - Corollary
 - Next steps: RADEC + webapp
 - Webapp testing:
+* Security Design
+- Ask Stephen about existing setups.
+** File Access
+Same docker image.
+Have one running with DESIROOT mounted, and another running with DESIROOT/fuji, DESIROOT/iron only (so access to only public specprods).
+Higher abstraction level: Python script to read from a text file of public release names and build a docker command out of it and spawn that process.
+** Password Access
+- By default, the script runs basic-auth required
+- If we can do this, we can also do allowed-releases here and avoid running different docker images.
+- So then we have a private one running with password-locked = True, and a public one with password-locked = False and releases set to public.
+*** Config file
+- DESIROOT location
+- Allowed releases?
+- Password locked: y/n
+- Username and password (encoded/encrypted, will look into this)
+- The file will be bundled into the docker image, so not something directly accessible from the filesystem.
+* Security Design Email
+Firstly, I wanted to ask about the existing setup - Anthony mentioned DESI had some existing stuff in place for handling security of private/public releases, and I wanted to ask if you could direct me to any docs/wikis which go over those, or anything in particular you think I should understand about them.
+
+I was thinking of using Basic Auth for the password-protection, since it plays well with both automated access via API and manual via webpage.
+It's similar to the screening used here: https://desi.lbl.gov/desipub/app/MembershipForm/form
+We'd probably store an encrypted version of the password as storage somewhere in the docker image, and check the input password against that as our auth method. Flask has various add-ons and features that should make basic auth clean to implement (I found several tutorials online).
+I'm not an expert on security stuff so I'm not sure if that meets whatever standards/expectations DESI has - if it doesn't, or if you have suggestions on what to do instead, let me know.
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication#basic_authentication_scheme
+
+
+One idea was to have a config file bundled in with the docker image that dictates whether the API requires username/password (and if so, includes the credentials encrypted somehow), as well as which releases it's allowed to access.
+So then you'd have two copies of the image running - one with password protection and full file access, and another with no password protection and access only to public directories.
+
+Another idea was to just have the config file handle password protection, and restrict file access by mounting different files. When we run the docker image we can mount parts of the local filesystem - the unrestricted API would mount DESIROOT, but the restricted one might only mount DESIROOT/fuji and DESIROOT/iron, for instance.
+So then the `public' docker image has no idea the private files even exist, so any attempt to access them via a bug or anything will just fail with `file not found'.
+We could build higher levels of abstraction over this, like a small script to generate the correct docker commands based on a list of public releases.
+The advantage here is that the main codebase doesn't have to care about whether it's allowed to access a file, so we can separate out the access control into this layer, at the cost of giving us a new moving part to worry about.
+* HW <2023-11-02 Thu>
+- Check refactors, fix the ones that will be big problems later if any
+- Focus: Build out webapp and test, including cacheing.
+- Clone fuji
+- Auth/etc. doesn't matter here. So this is just a dumb API server.
+- Error handling
+- Consider making the Parameters structs into plain dictionaries, so we can kwarg them. Do this
+- Status: Tile endpoint works, produces a file, ran rudimentary cache checks.
+- Next steps: More testing, plot
+* Next Steps
+- Plot
+- Error-handling
+- Refactoring

@@ -31,22 +31,6 @@ def handle(req: ApiRequest) -> Spectra:
         return radec(release, params.ra, params.dec, params.radius)
 
 
-def canonise_release_name(release: str) -> str:
-    """
-    Helper function to canonise the release name and error if a release name is invalid.
-
-    :param release: Not-necessarily-canonical name of a Data Release
-    :returns: Canonised name which maps to a directory
-
-    """
-    # TODO This is kind of gross, we should really have this live outside the code in a json or something, or pulled directly?
-    allowed = ["fuji", "iron", "daily"]
-    translations = {"edr": "fuji", "dr1": "iron"}
-    if release in allowed:
-        return release
-    if release in translations.keys():
-        return translations[release]
-    raise InvalidReleaseException
 
 
 def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra:
@@ -111,7 +95,7 @@ def targets(release: DataRelease, target_ids: List[int]) -> Spectra:
     return desispec.spectra.stack(retrieve_target_spectra(release, target_objects))
 
 
-def retrieve_targets(release: DataRelease, target_ids: List[int]) -> List[Target]:
+def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[Target]:
     """
     For each TARGET_ID, read the corresponding target metadata into a Target object.
 

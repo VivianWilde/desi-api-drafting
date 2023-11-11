@@ -7,6 +7,7 @@ import datetime as dt
 from models import *
 import desispec.io, desispec.spectra
 from desispec.spectra import Spectra
+import os
 
 
 DEBUG = True
@@ -24,59 +25,134 @@ def parse_list(lst: str) -> List[int]:
     return [int(i) for i in lst.split(",")]
 
 
-@app.route("<path: params>")
+@app.route("/api/v1/<path:params>")
 def top_level(params: str):
+    """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
+
+    :param params: Query params/URL string/whatever
+    :returns: None, but either renders HTML or sends a file as a response
+
+    """
     req = build_request(params)
-    response_file = build_response_file(req)
-    if mimetype(response_file) == "HTML":
+    print(req)
+    response_file = build_response_file(req, dt.datetime.now())
+    if mimetype(response_file) == "html":
         return render_template(response_file)
-    return send_file(response_file, attachment_filename=req.get_cache_path())
+    return send_file(response_file, download_name=f"{req.get_cache_path()}.fits")
 
 
-def build_request(params: str) -> ApiRequest:
-    # TODO
-    return ApiRequest()
+def build_request(request: str) -> ApiRequest:
+    """ Parse an API request path into an ApiRequest object
+
+    :param request: The slash-separated string representing the raw path of the API request
+    :returns: A parsed ApiRequest object.
+    """
+
+    command, release_name, req_type, *params = request.split("/")
+
+    command_enum = Command[command.upper()]
+    req_type_enum = RequestType[req_type.upper()]
+    release_canonised = release_name.lower()
+
+    formal_params = build_params(req_type_enum, params)
+
+    return ApiRequest(
+        command=command_enum,
+        release=release_canonised,
+        request_type=req_type_enum,
+        params=formal_params,
+    )
+
+def build_params(req_type: RequestType, params: List[str]) -> Parameters:
+    """Build a Parameters object out of the API parameters (a list of arguments)
+
+    :param req_type: The type of the API request as an enum: One of Tile/Target/Radec
+    :param params: A list of strings representing parameters in the API request, such as ['80605', '10,234,2761,3951']
+    :returns: A Parameters object representing the parameters specified in the request.
+    """
+
+    if req_type == RequestType.RADEC:
+        ra, dec, radius = parse_list(params[0])
+        return RadecParameters(ra, dec, radius)
+    elif req_type == RequestType.TARGETS:
+        return TargetParameters(parse_list(params[0]))
+    elif req_type == RequestType.TILE:
+        return TileParameters(int(params[0]), parse_list(params[1]))
 
 
 def build_response_file(
     req: ApiRequest, request_time: dt.datetime = dt.datetime.now()
 ) -> str:
-    """Build the file asked for by request, and return the path to it
+    """Build the file asked for by REQ, or reuse an existing one if it is sufficiently recent, and return the path to it
 
-    :param req:
-    :returns:
-
+    :param req: An ApiRequest object
+    :returns: A complete path (including the file extension) to a created file that should be sent back as the response
     """
-    # TODO: Extract into cache utils
-    path = req.get_cache_path()
-    cached_responses = os.listdir(path)
-    most_recent = max(cached_responses)
-    # TODO: Convert most_recent to time, do TimeDelta
-    # Use isoformat for times exclusively, so just doing string sorting works
-    age = most_recent_time - request_time
-    if age < CUTOFF:
-        return (
-            most_recent  # TODO: make it back into a path, adjoin to get_cache_path()?
-        )
+    cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
+    if os.path.isdir(cache_path):
+        cached_responses = os.listdir(cache_path)
+        most_recent = max(cached_responses, key=basename)
+        # Filenames are of the form <timestamp>.<ext>, the key filters out extension
+        print("recent", basename(most_recent))
+        age = request_time - dt.datetime.fromisoformat(basename(most_recent))
+        print("age", age)
+        if age < CUTOFF:
+            print("Used cache")
+            return os.path.join(cache_path, most_recent)
+    print("Rebuilding")
     spectra = handle(req)
-    resp_file = build_file(req.command, spectra)
-    # TODO how does this interact with write_spectra? Can we do this build/save separation? Probably fold them into one func It's fine
-    path = concat_path(path, request_time)
-    save_file(resp_file, path)
-    return path
+    save_path = os.path.join(cache_path, request_time.isoformat())
+    resp_file_path = create_file(req.command, spectra, save_path)
+    return resp_file_path
 
 
-def build_file(cmd: Command, spectra: Spectra):
+def create_file(cmd: Command, spectra: Spectra, save_path: str) -> str:
+    """Creates a file at SAVE_PATH.<ext> generated from data in SPECTRA. The type of file (FITS vs HTML currently) is determined by CMD.
+
+    :param cmd: Command from the request, one of DOWNLOAD or PLOT, defines whether the output is raw data or an HTML plot.
+    :param spectra: The Spectra object to draw our data from
+    :param save_path: The path (without an extension) to which we should save our file.
+    :returns: The full path (including extension) to the file created
+    """
     if cmd == Command.DOWNLOAD:
-        desispec.io.write_spectra(spectra)  # TODO
+        target_file = f"{save_path}.fits"
+        desispec.io.write_spectra(target_file, spectra)
+        return target_file
     elif cmd == Command.PLOT:
-        # TODO plotting - use matpolotlib example from demo for now
-        pass
+        target_file = f"{save_path}.html"
+        write_html(spectra, target_file)
+        return target_file
+    return ""
 
 
-# def concat_path
+def write_html(spectra: Spectra, path: str):
+    content = (
+        """<html><head><title>TODO</title></head><body>Hello World</body></html>"""
+    )
+    with open(path, "w") as f:
+        f.write(content)
+
+
+# File utilities for readability
+def mimetype(path: str) -> str:
+    """Returns the extension of the file"""
+    return os.path.splitext(path)[1].lower()
+
+
+def filename(path: str) -> str:
+    """Return the file name and extension (no path info)"""
+    return os.path.split(path)[0]
+
+
+def basename(path: str):
+    """Return the file name without extension or path info"""
+    return os.path.splitext(path)[0]
 
 
 def main():
-    # start a server
+    """Start a server running the webapp"""
     app.run()
+
+
+if __name__ == "__main__":
+    main()

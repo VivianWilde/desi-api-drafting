@@ -2,7 +2,7 @@
 from build_spectra import *
 from models import *
 
-# from webapp import *
+from webapp import *
 
 
 def test_tile():
