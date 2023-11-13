@@ -6,6 +6,7 @@ from typing import List, Tuple
 from models import *
 from desispec.spectra import Spectra
 import fitsio
+from astropy.table import Table
 import numpy as np
 
 # TODO: Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
@@ -29,8 +30,8 @@ def handle(req: ApiRequest) -> Spectra:
         return targets(release, params.target_ids)
     elif req.request_type == RequestType.RADEC:
         return radec(release, params.ra, params.dec, params.radius)
-
-
+    else:
+        raise InvalidReleaseException
 
 
 def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra:
@@ -72,7 +73,7 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
         latest,
         fibers=fibers,
         coadd=True,
-        redrock=False,
+        redrock=True,
         specprod=release.name,
         group="cumulative",
     )
@@ -140,7 +141,9 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
     return targets
 
 
-def retrieve_target_spectra(release: DataRelease, targets: List[Target]) -> List[Spectra]:
+def retrieve_target_spectra(
+    release: DataRelease, targets: List[Target]
+) -> List[Spectra]:
     """
     Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list.
 
@@ -159,6 +162,16 @@ def retrieve_target_spectra(release: DataRelease, targets: List[Target]) -> List
             healpix=target.healpix,
             specprod_dir=release.directory,
         )
+        redrock_file = desispec.io.findfile(
+            "redrock",
+            survey=target.survey,
+            faprogram=target.program,
+            groupname="healpix",
+            healpix=target.healpix,
+            specprod_dir=release.directory,
+        )
         spectra = desispec.io.read_spectra(source_file, targetids=[target.target_id])
+        zcat = Table.read(redrock_file, "REDSHIFTS")
+        spectra.extra_catalog = zcat
         target_spectra.append(spectra)
     return target_spectra

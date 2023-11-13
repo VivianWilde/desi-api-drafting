@@ -7,6 +7,9 @@ import datetime as dt
 from models import *
 import desispec.io, desispec.spectra
 from desispec.spectra import Spectra
+from prospect.viewer import plotspectra
+
+
 import os
 
 
@@ -14,15 +17,6 @@ DEBUG = True
 app = Flask(__name__)
 app.config.from_object(__name__)
 app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
-
-
-def parse_list(lst: str) -> List[int]:
-    """Takes in a string representing a comma-separated list of integers (no spaces) and returns the list
-
-    :param lst:
-    :returns:
-    """
-    return [int(i) for i in lst.split(",")]
 
 
 @app.route("/api/v1/<path:params>")
@@ -42,7 +36,7 @@ def top_level(params: str):
 
 
 def build_request(request: str) -> ApiRequest:
-    """ Parse an API request path into an ApiRequest object
+    """Parse an API request path into an ApiRequest object
 
     :param request: The slash-separated string representing the raw path of the API request
     :returns: A parsed ApiRequest object.
@@ -62,6 +56,7 @@ def build_request(request: str) -> ApiRequest:
         request_type=req_type_enum,
         params=formal_params,
     )
+
 
 def build_params(req_type: RequestType, params: List[str]) -> Parameters:
     """Build a Parameters object out of the API parameters (a list of arguments)
@@ -101,12 +96,11 @@ def build_response_file(
             return os.path.join(cache_path, most_recent)
     print("Rebuilding")
     spectra = handle(req)
-    save_path = os.path.join(cache_path, request_time.isoformat())
-    resp_file_path = create_file(req.command, spectra, save_path)
+    resp_file_path = create_file(req.command, spectra, cache_path, request_time.isoformat())
     return resp_file_path
 
 
-def create_file(cmd: Command, spectra: Spectra, save_path: str) -> str:
+def create_file(cmd: Command, spectra: Spectra, save_dir: str, file_name: str) -> str:
     """Creates a file at SAVE_PATH.<ext> generated from data in SPECTRA. The type of file (FITS vs HTML currently) is determined by CMD.
 
     :param cmd: Command from the request, one of DOWNLOAD or PLOT, defines whether the output is raw data or an HTML plot.
@@ -115,22 +109,25 @@ def create_file(cmd: Command, spectra: Spectra, save_path: str) -> str:
     :returns: The full path (including extension) to the file created
     """
     if cmd == Command.DOWNLOAD:
-        target_file = f"{save_path}.fits"
+        target_file = f"{save_dir}/{file_name}.fits"
         desispec.io.write_spectra(target_file, spectra)
         return target_file
     elif cmd == Command.PLOT:
-        target_file = f"{save_path}.html"
-        write_html(spectra, target_file)
-        return target_file
+        return write_html(spectra, save_dir, file_name)
     return ""
 
 
-def write_html(spectra: Spectra, path: str):
-    content = (
-        """<html><head><title>TODO</title></head><body>Hello World</body></html>"""
+def write_html(spectra: Spectra, save_dir: str, file_name: str)->str:
+    plotspectra(
+        spectra,
+        zcatalog=spectra.extra_catalog,
+        html_dir=save_dir,
+        title=file_name,
+        with_vi_widgets=False,
+        with_full_2ndfit=False,
+        num_approx_fits=0,
     )
-    with open(path, "w") as f:
-        f.write(content)
+    return f"{save_dir}/{file_name}.html"
 
 
 # File utilities for readability
@@ -147,6 +144,11 @@ def filename(path: str) -> str:
 def basename(path: str):
     """Return the file name without extension or path info"""
     return os.path.splitext(path)[0]
+
+
+def parse_list(lst: str) -> List[int]:
+    """Takes in a string representing a comma-separated list of integers (no spaces) and returns the list"""
+    return [int(i) for i in lst.split(",")]
 
 
 def main():

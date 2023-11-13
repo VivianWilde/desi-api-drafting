@@ -2,7 +2,7 @@
 from build_spectra import *
 from models import *
 
-from webapp import *
+from webapp import top_level
 
 
 def test_tile():
@@ -40,4 +40,17 @@ def test_target():
     return result
 
 
-test_target()
+# test_target()
+
+# Webapp mocking
+def test_app_tile():
+    x= top_level("download/fuji/tile/80605/10,234,2761,3951")
+    print(x)
+    return x
+
+def test_app_target():
+    x= top_level("download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784")
+    print(x)
+    return x
+
+test_app_target()
