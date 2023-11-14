@@ -53,4 +53,4 @@ def test_app_target():
     print(x)
     return x
 
-test_app_tile()
+test_app_target()
