@@ -13,11 +13,6 @@ from prospect.viewer import plotspectra
 import os
 
 
-DEBUG = True
-app = Flask(__name__)
-app.config.from_object(__name__)
-app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
-
 
 @app.route("/api/v1/<path:params>")
 def top_level(params: str):
@@ -28,11 +23,15 @@ def top_level(params: str):
 
     """
     req = build_request(params)
-    print(req)
     response_file = build_response_file(req, dt.datetime.now())
     if mimetype(response_file) == "html":
         return render_template(response_file)
     return send_file(response_file, download_name=f"{req.get_cache_path()}.fits")
+
+def test_file_gen(params: str) -> str:
+    req = build_request(params)
+    response_file = build_response_file(req, dt.datetime.now())
+    return response_file
 
 
 def build_request(request: str) -> ApiRequest:
@@ -153,6 +152,12 @@ def parse_list(lst: str) -> List[int]:
 
 def main():
     """Start a server running the webapp"""
+    DEBUG = True
+    app = Flask(__name__)
+    app.config.from_object(__name__)
+    app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
+
+
     app.run()
 
 
