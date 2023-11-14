@@ -107,11 +107,13 @@ def create_file(cmd: Command, spectra: Spectra, save_dir: str, file_name: str) -
     :param save_path: The path (without an extension) to which we should save our file.
     :returns: The full path (including extension) to the file created
     """
+    os.makedirs(save_dir, exist_ok=True)
     if cmd == Command.DOWNLOAD:
         target_file = f"{save_dir}/{file_name}.fits"
         desispec.io.write_spectra(target_file, spectra)
         return target_file
     elif cmd == Command.PLOT:
+        target_file = f"{save_dir}/{file_name}.html"
         return write_html(spectra, save_dir, file_name)
     return ""
 
