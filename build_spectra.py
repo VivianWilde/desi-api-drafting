@@ -78,9 +78,10 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
         group="cumulative",
     )
     if isinstance(spectra, Tuple):
-        result = spectra[0]
-        result.extra_catalog = result[1]
-        return result
+        spectra, redrock = spectra
+        keep = np.isin(redrock["FIBER_ID"], fibers) & redrock["TILE"]==tile
+        spectra.extra_catalog = redrock[keep]
+        return spectra
     else:
         return spectra
 
