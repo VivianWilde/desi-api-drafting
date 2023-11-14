@@ -78,7 +78,9 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
         group="cumulative",
     )
     if isinstance(spectra, Tuple):
-        return spectra[0]
+        result = spectra[0]
+        result.extra_catalog = result[1]
+        return result
     else:
         return spectra
 
