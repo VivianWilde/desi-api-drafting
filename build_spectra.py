@@ -174,7 +174,7 @@ def retrieve_target_spectra(
         )
         spectra = desispec.io.read_spectra(source_file, targetids=[target.target_id])
         zcat = Table.read(redrock_file, "REDSHIFTS")
-        keep = ((zcat["ZCAT_PRIMARY"] == True) & zcat["TARGETID"] == target.target_id,)
+        keep = zcat["TARGETID"] == target.target_id
         zcat = zcat[keep]
         spectra.extra_catalog = zcat
         target_spectra.append(spectra)

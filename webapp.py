@@ -1,6 +1,6 @@
 #!/usr/bin/env ipython3
 
-from flask import Flask, send_file, render_template
+# from flask import Flask, send_file, render_template
 from typing import List
 from build_spectra import handle
 import datetime as dt
@@ -14,7 +14,7 @@ import os
 
 
 
-@app.route("/api/v1/<path:params>")
+# @app.route("/api/v1/<path:params>")
 def top_level(params: str):
     """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
 
