@@ -49,7 +49,7 @@ def test_app_tile():
     return x
 
 def test_app_target():
-    x= test_file_gen("plot/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784")
+    x= test_file_gen("download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784")
     print(x)
     return x
 

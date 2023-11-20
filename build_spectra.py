@@ -8,6 +8,7 @@ from desispec.spectra import Spectra
 import fitsio
 from astropy.table import Table
 import numpy as np
+from utils import log
 
 # TODO: Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.
@@ -23,6 +24,7 @@ def handle(req: ApiRequest) -> Spectra:
 
     canonised = canonise_release_name(req.release)
     release = DataRelease(canonised)
+    log("release: ", release)
     params = req.params
     if req.request_type == RequestType.TILE:
         return tile(release, params.tile, params.fibers)
@@ -31,7 +33,7 @@ def handle(req: ApiRequest) -> Spectra:
     elif req.request_type == RequestType.RADEC:
         return radec(release, params.ra, params.dec, params.radius)
     else:
-        raise InvalidReleaseException
+        raise DesiApiException()
 
 
 def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra:
@@ -66,6 +68,7 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
     :returns: A combined Spectra containing the spectra of all specified fibers
     """
     folder = f"{release.tile_dir}/{tile}"
+    log("reading tile info from: ", folder)
     latest = max(os.listdir(folder))
 
     spectra = desispec.io.read_tile_spectra(
@@ -108,6 +111,7 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
     :returns: A list of target objects, each containing metadata for a target with a specified target_id
     """
     zcatfile = release.healpix_fits
+    log("reading target zcat info from: ", zcatfile)
     zcat = fitsio.read(
         zcatfile,
         "ZCATALOG",
@@ -155,6 +159,7 @@ def retrieve_target_spectra(
     :returns: A list of Spectra objects, one for each target passed in
     """
     # Unoptimised: Reads one file per target, no grouping of targets, so may read same file several times.
+    # TODO: Optimise, logging
     target_spectra = []
     for target in targets:
         source_file = desispec.io.findfile(

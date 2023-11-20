@@ -248,6 +248,29 @@ The advantage here is that the main codebase doesn't have to care about whether 
 - Status: Tile endpoint works, produces a file, ran rudimentary cache checks.
 - Next steps: More testing, plot
 * Next Steps
-- Plot
-- Error-handling
-- Refactoring
+** Error-handling
+Build_Request and Build_Params need rich error-checking so we can feed info on malformed reqs back to user.
+
+Catch errors on top level. Errors in build_request give 403, errors elsewhere give 500.
+
+build_response: Check if the time-parsing fails.
+Check if library calls fail, basically - write_spectra and plotspectra.
+Also read_tile_spectra, fitsio.read,  read_spectra, Table.read
+
+DONE Log reqs as they come in, and log meta like rebuilding/used cache
+** Validation
+Largely tedium. Validate parameters as specified
+TODO ask about validation rules.
+** Refactoring
+* Actual dockering
+- Mount DESIROOT somewhere
+- Specify where DESIROOT is mounted (from POV of the image)
+- Might just hardcode DESIROOT='/desiroot' in the python thing, and always mount $DESIROOT to target '/desiroot' in the run.sh
+- Then we escape environment var juggling
+** How does this play with the public multi-mount?
+Mount the allowed releases as '/desiroot/<fuji>', etc.
+It works fine.
+* Resp
+- They would all have a similar pattern of turning the request url into formal parameters and then calling build_spectra.get_target_spectra, figured it made sense to do that in one func rather than 3.
+- The basic idea is that then the webapp would have to care about this domain stuff, whereas ideally I think domain stuff will be concentrated in build_spectra.
+- Will make the env var changes.

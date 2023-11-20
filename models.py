@@ -9,10 +9,9 @@ import os
 # Models and constants
 
 # Unused for now
+# TODO: Fix for docker edition
 SQL_DIR = f"{os.getenv('home')}/desi-sql"
-
 DESIROOT= os.getenv("DESIROOT") or "/global/cfs/cdirs/desi/spectro/redux"
-
 CACHE_DIR = os.path.expanduser("~/tmp/desi-api-cache")
 
 
@@ -38,8 +37,10 @@ def canonise_release_name(release: str) -> str:
         return translations[release]
     raise InvalidReleaseException
 
+class DesiApiException(Exception):
+    pass
 
-class InvalidReleaseException(Exception):
+class InvalidReleaseException(DesiApiException):
     pass
 
 

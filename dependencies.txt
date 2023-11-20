@@ -1,0 +1,6 @@
+flask
+prospect
+desispec
+astropy
+fitsio
+numpy

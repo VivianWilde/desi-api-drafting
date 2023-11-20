@@ -1,20 +1,25 @@
 #!/usr/bin/env ipython3
 
-# from flask import Flask, send_file, render_template
+from flask import Flask, send_file, render_template
 from typing import List
+
 from build_spectra import handle
 import datetime as dt
 from models import *
 import desispec.io, desispec.spectra
 from desispec.spectra import Spectra
 from prospect.viewer import plotspectra
+from utils import *
 
 
 import os
 
+DEBUG = True
+app = Flask(__name__)
+app.config.from_object(__name__)
+app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
 
-
-# @app.route("/api/v1/<path:params>")
+@app.route("/api/v1/<path:params>")
 def top_level(params: str):
     """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
 
@@ -22,16 +27,30 @@ def top_level(params: str):
     :returns: None, but either renders HTML or sends a file as a response
 
     """
+    log("params: ", params)
     req = build_request(params)
+    log("request: ", req)
     response_file = build_response_file(req, dt.datetime.now())
+    log("response file: ", response_file)
     if mimetype(response_file) == "html":
         return render_template(response_file)
     return send_file(response_file, download_name=f"{req.get_cache_path()}.fits")
 
-def test_file_gen(params: str) -> str:
-    req = build_request(params)
-    response_file = build_response_file(req, dt.datetime.now())
-    return response_file
+def validate(req: ApiRequest):
+    # switch case on req type
+    pass
+
+
+def validate_radec(params: RadecParameters):
+    pass
+
+
+def validate_tile(params: TileParameters):
+    pass
+
+
+def validate_target(params: TargetParameters):
+    pass
 
 
 def build_request(request: str) -> ApiRequest:
@@ -91,11 +110,13 @@ def build_response_file(
         age = request_time - dt.datetime.fromisoformat(basename(most_recent))
         print("age", age)
         if age < CUTOFF:
-            print("Used cache")
+            log("using cache")
             return os.path.join(cache_path, most_recent)
-    print("Rebuilding")
+    log("rebuilding")
     spectra = handle(req)
-    resp_file_path = create_file(req.command, spectra, cache_path, request_time.isoformat())
+    resp_file_path = create_file(
+        req.command, spectra, cache_path, request_time.isoformat()
+    )
     return resp_file_path
 
 
@@ -110,56 +131,43 @@ def create_file(cmd: Command, spectra: Spectra, save_dir: str, file_name: str) -
     os.makedirs(save_dir, exist_ok=True)
     if cmd == Command.DOWNLOAD:
         target_file = f"{save_dir}/{file_name}.fits"
-        desispec.io.write_spectra(target_file, spectra)
-        return target_file
+        try:
+            desispec.io.write_spectra(target_file, spectra)
+            return target_file
+        except Exception as e:
+            raise DesiApiException(e)
     elif cmd == Command.PLOT:
         target_file = f"{save_dir}/{file_name}.html"
         return write_html(spectra, save_dir, file_name)
-    return ""
+    else:
+        raise DesiApiException("Invalid Command (must be PLOT or DOWNLOAD)")
 
 
-def write_html(spectra: Spectra, save_dir: str, file_name: str)->str:
-    plotspectra(
-        spectra,
-        zcatalog=spectra.extra_catalog,
-        html_dir=save_dir,
-        title=file_name,
-        with_vi_widgets=False,
-        with_full_2ndfit=False,
-        num_approx_fits=0,
-    )
-    return f"{save_dir}/{file_name}.html"
+def write_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
+    try:
+        plotspectra(
+            spectra,
+            zcatalog=spectra.extra_catalog,
+            html_dir=save_dir,
+            title=file_name,
+            with_vi_widgets=False,
+            with_full_2ndfit=False,
+            num_approx_fits=0,
+        )
+        return f"{save_dir}/{file_name}.html"
+    except Exception as e:
+        raise DesiApiException(e)
 
 
-# File utilities for readability
-def mimetype(path: str) -> str:
-    """Returns the extension of the file"""
-    return os.path.splitext(path)[1].lower()
-
-
-def filename(path: str) -> str:
-    """Return the file name and extension (no path info)"""
-    return os.path.split(path)[0]
-
-
-def basename(path: str):
-    """Return the file name without extension or path info"""
-    return os.path.splitext(path)[0]
-
-
-def parse_list(lst: str) -> List[int]:
-    """Takes in a string representing a comma-separated list of integers (no spaces) and returns the list"""
-    return [int(i) for i in lst.split(",")]
+# For testing the pipeline from request -> build file, for testing on NERSC pre web-app
+def test_file_gen(params: str) -> str:
+    req = build_request(params)
+    response_file = build_response_file(req, dt.datetime.now())
+    return response_file
 
 
 def main():
     """Start a server running the webapp"""
-    DEBUG = True
-    app = Flask(__name__)
-    app.config.from_object(__name__)
-    app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
-
-
     app.run()
 
 
