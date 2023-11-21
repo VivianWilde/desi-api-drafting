@@ -2,7 +2,7 @@
 
 from desispec.util import get_logger
 import os
-from typing import List
+from typing import List, Callable, Any
 
 def mimetype(path: str) -> str:
     """Returns the extension of the file"""
@@ -19,12 +19,17 @@ def basename(path: str):
     return os.path.splitext(path)[0]
 
 
-def parse_list(lst: str) -> List[int]:
-    """Takes in a string representing a comma-separated list of integers (no spaces) and returns the list"""
-    return [int(i) for i in lst.split(",")]
+def build_list_parser(func: Callable[[str], Any]) -> Callable[[str], List[Any]] :
+    """Returns a func that takes in a string representing a comma-separated list of integers or floats (no spaces) and returns the list"""
+    return lambda s: [func(i) for i in s.split(",")]
+
+parse_list_int = build_list_parser(int)
+parse_list_float = build_list_parser(float)
 
 
 def log(*args):
     """Designed as a placeholder, will replace with more"""
-    logger = get_logger()
-    logger.info(*args)
+    # logger = get_logger()
+    # logger.info(*args)
+
+    print("LOG INFO:", *args)

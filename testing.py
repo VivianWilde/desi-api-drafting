@@ -10,7 +10,7 @@ def test_tile():
     params = TileParameters(tile=80605, fibers=fibers)
     req = ApiRequest(
         command=Command.DOWNLOAD,
-        request_type=RequestType.TILE,
+        endpoint=Endpoint.TILE,
         release="fuji",
         params=params,
     )
@@ -30,7 +30,7 @@ def test_target():
     params = TargetParameters(target_ids=targets)
     req = ApiRequest(
         command=Command.DOWNLOAD,
-        request_type=RequestType.TARGETS,
+        endpoint=Endpoint.TARGETS,
         release="fuji",
         params=params,
     )

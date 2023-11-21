@@ -11,7 +11,8 @@ import os
 # Unused for now
 # TODO: Fix for docker edition
 SQL_DIR = f"{os.getenv('home')}/desi-sql"
-DESIROOT= os.getenv("DESIROOT") or "/global/cfs/cdirs/desi/spectro/redux"
+SPECTRO_REDUX= os.getenv("DESI_SPECTRO_REDUX")
+# or "/global/cfs/cdirs/desi/spectro/redux"
 CACHE_DIR = os.path.expanduser("~/tmp/desi-api-cache")
 
 
@@ -50,7 +51,7 @@ class Command(Enum):
     PLOT = 2
 
 
-class RequestType(Enum):
+class Endpoint(Enum):
     UNSPECIFIED = 0
     TILE = 1
     TARGETS = 2
@@ -101,14 +102,14 @@ class TargetParameters(Parameters):
 class ApiRequest:
     command: Command  # should be enum really
     release: str
-    request_type: RequestType  # tile/target/radec
+    endpoint: Endpoint  # tile/target/radec
     params: Parameters
 
     def get_cache_path(self) -> str:
         """Return the path (relative to cache dir) to write this request to
         :returns:
         """
-        return f"{self.command}-{canonise_release_name(self.release)}-{self.request_type}-params-{self.params.canonical}"
+        return f"{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}"
 
     def validate(self) -> bool:
         return True
@@ -141,7 +142,7 @@ class DataRelease:
 
     def __init__(self, name: str) -> None:
         self.name = name.lower()
-        self.directory = f"{DESIROOT}/{self.name}"
+        self.directory = f"{SPECTRO_REDUX}/{self.name}"
         self.tile_fits = f"{self.directory}/zcatalog/zall-tilecumulative-{self.name}.fits"
         self.tile_dir = f"{self.directory}/tiles/cumulative"
         self.healpix_fits = f"{self.directory}/zcatalog/zall-pix-{self.name}.fits"

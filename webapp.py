@@ -1,6 +1,6 @@
 #!/usr/bin/env ipython3
 
-from flask import Flask, send_file, render_template
+from flask import Flask, send_file, send_from_directory
 from typing import List
 
 from build_spectra import handle
@@ -19,22 +19,29 @@ app = Flask(__name__)
 app.config.from_object(__name__)
 app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
 
-@app.route("/api/v1/<path:params>")
-def top_level(params: str):
+
+@app.route("/api/v1/<command>/<release>/<endpoint>/<path:params>")
+def top_level(command: str, release: str, endpoint: str, params: str):
     """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
 
     :param params: Query params/URL string/whatever
     :returns: None, but either renders HTML or sends a file as a response
-
     """
+    req_time = dt.datetime.now()
     log("params: ", params)
-    req = build_request(params)
+    req = build_request(command, release, endpoint, params)
     log("request: ", req)
-    response_file = build_response_file(req, dt.datetime.now())
+
+    response_file = build_response_file(req, req_time)
     log("response file: ", response_file)
-    if mimetype(response_file) == "html":
-        return render_template(response_file)
-    return send_file(response_file, download_name=f"{req.get_cache_path()}.fits")
+    if req.command == Command.PLOT:
+        # return render_template(response_file)
+        return send_file(response_file)
+    else:
+        return send_file(
+            response_file, download_name=f"desi-api-{req_time.isoformat()}.fits"
+        )
+
 
 def validate(req: ApiRequest):
     # switch case on req type
@@ -53,44 +60,41 @@ def validate_target(params: TargetParameters):
     pass
 
 
-def build_request(request: str) -> ApiRequest:
+def build_request(command: str, release: str, endpoint: str, params: str) -> ApiRequest:
     """Parse an API request path into an ApiRequest object
 
     :param request: The slash-separated string representing the raw path of the API request
     :returns: A parsed ApiRequest object.
     """
-
-    command, release_name, req_type, *params = request.split("/")
-
     command_enum = Command[command.upper()]
-    req_type_enum = RequestType[req_type.upper()]
-    release_canonised = release_name.lower()
+    endpoint_enum = Endpoint[endpoint.upper()]
+    release_canonised = release.lower()
 
-    formal_params = build_params(req_type_enum, params)
+    formal_params = build_params(endpoint_enum, params.split("/"))
 
     return ApiRequest(
         command=command_enum,
         release=release_canonised,
-        request_type=req_type_enum,
+        endpoint=endpoint_enum,
         params=formal_params,
     )
 
 
-def build_params(req_type: RequestType, params: List[str]) -> Parameters:
+def build_params(endpoint: Endpoint, params: List[str]) -> Parameters:
     """Build a Parameters object out of the API parameters (a list of arguments)
 
-    :param req_type: The type of the API request as an enum: One of Tile/Target/Radec
+    :param endpoint: The type of the API request as an enum: One of Tile/Target/Radec
     :param params: A list of strings representing parameters in the API request, such as ['80605', '10,234,2761,3951']
     :returns: A Parameters object representing the parameters specified in the request.
     """
 
-    if req_type == RequestType.RADEC:
-        ra, dec, radius = parse_list(params[0])
+    if endpoint == Endpoint.RADEC:
+        ra, dec, radius = parse_list_float(params[0])
         return RadecParameters(ra, dec, radius)
-    elif req_type == RequestType.TARGETS:
-        return TargetParameters(parse_list(params[0]))
-    elif req_type == RequestType.TILE:
-        return TileParameters(int(params[0]), parse_list(params[1]))
+    elif endpoint == Endpoint.TARGETS:
+        return TargetParameters(parse_list_int(params[0]))
+    elif endpoint == Endpoint.TILE:
+        return TileParameters(int(params[0]), parse_list_int(params[1]))
 
 
 def build_response_file(

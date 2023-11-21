@@ -26,11 +26,11 @@ def handle(req: ApiRequest) -> Spectra:
     release = DataRelease(canonised)
     log("release: ", release)
     params = req.params
-    if req.request_type == RequestType.TILE:
+    if req.endpoint == Endpoint.TILE:
         return tile(release, params.tile, params.fibers)
-    elif req.request_type == RequestType.TARGETS:
+    elif req.endpoint == Endpoint.TARGETS:
         return targets(release, params.target_ids)
-    elif req.request_type == RequestType.RADEC:
+    elif req.endpoint == Endpoint.RADEC:
         return radec(release, params.ra, params.dec, params.radius)
     else:
         raise DesiApiException()
@@ -70,6 +70,7 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
     folder = f"{release.tile_dir}/{tile}"
     log("reading tile info from: ", folder)
     latest = max(os.listdir(folder))
+    log(latest)
 
     spectra = desispec.io.read_tile_spectra(
         tile,
@@ -80,6 +81,7 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
         specprod=release.name,
         group="cumulative",
     )
+    log("read spectra")
     if isinstance(spectra, Tuple):
         # spectra, redrock = spectra
         # keep = np.isin(redrock["FIBER_ID"], fibers) & redrock["TILE"]==tile

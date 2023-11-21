@@ -270,7 +270,15 @@ TODO ask about validation rules.
 ** How does this play with the public multi-mount?
 Mount the allowed releases as '/desiroot/<fuji>', etc.
 It works fine.
-* Resp
+* DONE Resp
 - They would all have a similar pattern of turning the request url into formal parameters and then calling build_spectra.get_target_spectra, figured it made sense to do that in one func rather than 3.
 - The basic idea is that then the webapp would have to care about this domain stuff, whereas ideally I think domain stuff will be concentrated in build_spectra.
 - Will make the env var changes.
+
+- TODO: What does it do to history.
+
+- TODO fix bug with parse_list
+
+- DONE use spectro_redux
+
+- DONE debug: Builds html but returns as fits
