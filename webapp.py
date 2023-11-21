@@ -24,8 +24,11 @@ app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
 def top_level(command: str, release: str, endpoint: str, params: str):
     """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
 
-    :param params: Query params/URL string/whatever
-    :returns: None, but either renders HTML or sends a file as a response
+    :param command: One of Download/Plot, specifies whether to return raw FITS data or an interactive HTML plot.
+    :param release: The DESI release from which to draw data.
+    :param endpoint: One of Tile/Target/Radec, the endpoint to query.
+    :param params: Endpoint-specific parameters, such as a tile ID and list of fibers, a list of target IDs, or a (ra, dec) point and radius.
+    :returns: None, but either renders HTML or sends a file as a response.
     """
     req_time = dt.datetime.now()
     log("params: ", params)
@@ -35,11 +38,10 @@ def top_level(command: str, release: str, endpoint: str, params: str):
     response_file = build_response_file(req, req_time)
     log("response file: ", response_file)
     if req.command == Command.PLOT:
-        # return render_template(response_file)
         return send_file(response_file)
     else:
         return send_file(
-            response_file, download_name=f"desi-api-{req_time.isoformat()}.fits"
+            response_file, download_name=f"desi_api_{req_time.isoformat()}.fits"
         )
 
 
@@ -61,9 +63,8 @@ def validate_target(params: TargetParameters):
 
 
 def build_request(command: str, release: str, endpoint: str, params: str) -> ApiRequest:
-    """Parse an API request path into an ApiRequest object
+    """Parse an API request path into an ApiRequest object. The parameters represent the components of the request URL.
 
-    :param request: The slash-separated string representing the raw path of the API request
     :returns: A parsed ApiRequest object.
     """
     command_enum = Command[command.upper()]
@@ -98,11 +99,12 @@ def build_params(endpoint: Endpoint, params: List[str]) -> Parameters:
 
 
 def build_response_file(
-    req: ApiRequest, request_time: dt.datetime = dt.datetime.now()
+    req: ApiRequest, request_time: dt.datetime 
 ) -> str:
     """Build the file asked for by REQ, or reuse an existing one if it is sufficiently recent, and return the path to it
 
     :param req: An ApiRequest object
+    :param request_time: The time the request was made, used for cache checks, etc.
     :returns: A complete path (including the file extension) to a created file that should be sent back as the response
     """
     cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
@@ -164,16 +166,12 @@ def write_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
 
 
 # For testing the pipeline from request -> build file, for testing on NERSC pre web-app
-def test_file_gen(params: str) -> str:
-    req = build_request(params)
+def test_file_gen(request_args: str) -> str:
+    command, release, endpoint, *params = request_args.split("/")
+    req = build_request(command, release, endpoint, "/".join(params))
     response_file = build_response_file(req, dt.datetime.now())
     return response_file
 
 
-def main():
-    """Start a server running the webapp"""
-    app.run()
-
-
 if __name__ == "__main__":
-    main()
+    app.run()

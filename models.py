@@ -12,7 +12,6 @@ import os
 # TODO: Fix for docker edition
 SQL_DIR = f"{os.getenv('home')}/desi-sql"
 SPECTRO_REDUX= os.getenv("DESI_SPECTRO_REDUX")
-# or "/global/cfs/cdirs/desi/spectro/redux"
 CACHE_DIR = os.path.expanduser("~/tmp/desi-api-cache")
 
 
@@ -73,10 +72,6 @@ class RadecParameters(Parameters):
     @property
     def canonical(self)->Tuple:
         return (self.ra, self.dec, self.radius)
-
-
-
-
 
 @dataclass
 class TileParameters(Parameters):
