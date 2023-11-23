@@ -49,11 +49,12 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     targets = retrieve_targets(release)
 
     def distfilter(target: Target) -> bool:
-        return sqrt((ra - target.ra) ** 2 + (dec - target.dec) ** 2) <= radius
+        return sqrt((ra - target.ra) ** 2 + (dec - target.dec) ** 2) <= radius/3600
 
     relevant_targets = [
         t for t in targets if distfilter(t)
     ]  # TODO probably inefficient
+    log(f'Retrieving {len(relevant_targets)} targets')
     spectra = retrieve_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
