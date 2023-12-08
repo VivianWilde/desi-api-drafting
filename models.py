@@ -3,8 +3,10 @@ from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass
 import datetime as dt
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import os
+
+from werkzeug.datastructures import ImmutableMultiDict
 
 # Models and constants
 
@@ -35,13 +37,11 @@ def canonise_release_name(release: str) -> str:
         return release
     if release in translations.keys():
         return translations[release]
-    raise InvalidReleaseException
+    raise DesiApiException(f"release must be one of FUJI or IRON, not {release}")
 
 class DesiApiException(Exception):
     pass
 
-class InvalidReleaseException(DesiApiException):
-    pass
 
 
 class Command(Enum):
@@ -99,6 +99,7 @@ class ApiRequest:
     release: str
     endpoint: Endpoint  # tile/target/radec
     params: Parameters
+    filters: Dict
 
     def get_cache_path(self) -> str:
         """Return the path (relative to cache dir) to write this request to

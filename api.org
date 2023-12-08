@@ -277,8 +277,37 @@ It works fine.
 
 - TODO: What does it do to history.
 
-- TODO fix bug with parse_list
+- DONE fix bug with parse_list
 
 - DONE use spectro_redux
 
 - DONE debug: Builds html but returns as fits
+* HW
+- Error handling
+- Docs
+- Post reqs + optional query params in URL
+** Post requests
+Use JSON.
+Have a filters sub-object and a params sub-object
+
+How to do params properly?
+
+In the POST, pass them via a dictionary.
+Internally, how to store them? I prefer objects but dicts are fine.
+Objects let us canonise.
+
+
+
+
+
+
+** Optional Params
+*** Dict
+Then the trick becomes parsing them.
+
+Basic filters are
+
+
+Have a final function that takes in a spectra object (or a set of spectra objects) and a dictionary and interprets them via filtration.
+
+Then we can formalise it as enums

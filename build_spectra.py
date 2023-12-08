@@ -33,7 +33,7 @@ def handle(req: ApiRequest) -> Spectra:
     elif req.endpoint == Endpoint.RADEC:
         return radec(release, params.ra, params.dec, params.radius)
     else:
-        raise DesiApiException()
+        raise DesiApiException("Invalid Endpoint")
 
 
 def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra:
@@ -72,15 +72,19 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
     latest = max(os.listdir(folder))
     log(latest)
 
-    spectra = desispec.io.read_tile_spectra(
-        tile,
-        latest,
-        fibers=fibers,
-        coadd=True,
-        redrock=True,
-        specprod=release.name,
-        group="cumulative",
-    )
+    try:
+        spectra = desispec.io.read_tile_spectra(
+            tile,
+            latest,
+            fibers=fibers,
+            coadd=True,
+            redrock=True,
+            specprod=release.name,
+            group="cumulative",
+        )
+    except:
+        raise DesiApiException("unable to locate tiles or fibers")
+        # TODO: Figure out read_tile_spectra errors and use those
     log("read spectra")
     if isinstance(spectra, Tuple):
         # spectra, redrock = spectra
@@ -114,20 +118,23 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
     """
     zcatfile = release.healpix_fits
     log("reading target zcat info from: ", zcatfile)
-    zcat = fitsio.read(
-        zcatfile,
-        "ZCATALOG",
-        columns=[
-            "TARGETID",
-            "HEALPIX",
-            "SURVEY",
-            "PROGRAM",
-            "ZCAT_PRIMARY",
-            # We don't always need these, but save them so we can reuse this function. Maybe make it optional if this has high overhead.
-            "TARGET_RA",
-            "TARGET_DEC",
-        ],
-    )
+    try:
+        zcat = fitsio.read(
+            zcatfile,
+            "ZCATALOG",
+            columns=[
+                "TARGETID",
+                "HEALPIX",
+                "SURVEY",
+                "PROGRAM",
+                "ZCAT_PRIMARY",
+                # We don't always need these, but save them so we can reuse this function. Maybe make it optional if this has high overhead.
+                "TARGET_RA",
+                "TARGET_DEC",
+            ],
+        )
+    except:
+        raise DesiApiException("unable to read target information")
     keep = (
         ((zcat["ZCAT_PRIMARY"] == True) & np.isin(zcat["TARGETID"], target_ids))
         if len(target_ids)
@@ -147,6 +154,9 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
                 dec=target["TARGET_DEC"],
             )
         )
+        target_ids.remove(target["TARGETID"])
+    if len(target_ids):
+        raise DesiApiException("unable to find targets:", target_ids)
     return targets
 
 
@@ -163,27 +173,39 @@ def retrieve_target_spectra(
     # Unoptimised: Reads one file per target, no grouping of targets, so may read same file several times.
     # TODO: Optimise, logging
     target_spectra = []
+    failures = []
     for target in targets:
-        source_file = desispec.io.findfile(
-            "coadd",
-            survey=target.survey,
-            faprogram=target.program,
-            groupname="healpix",
-            healpix=target.healpix,
-            specprod_dir=release.directory,
-        )
-        redrock_file = desispec.io.findfile(
-            "redrock",
-            survey=target.survey,
-            faprogram=target.program,
-            groupname="healpix",
-            healpix=target.healpix,
-            specprod_dir=release.directory,
-        )
-        spectra = desispec.io.read_spectra(source_file, targetids=[target.target_id])
-        zcat = Table.read(redrock_file, "REDSHIFTS")
-        keep = zcat["TARGETID"] == target.target_id
-        zcat = zcat[keep]
-        spectra.extra_catalog = zcat
-        target_spectra.append(spectra)
+        try:
+            source_file = desispec.io.findfile(
+                "coadd",
+                survey=target.survey,
+                faprogram=target.program,
+                groupname="healpix",
+                healpix=target.healpix,
+                specprod_dir=release.directory,
+            )
+            redrock_file = desispec.io.findfile(
+                "redrock",
+                survey=target.survey,
+                faprogram=target.program,
+                groupname="healpix",
+                healpix=target.healpix,
+                specprod_dir=release.directory,
+            )
+            spectra = desispec.io.read_spectra(
+                source_file, targetids=[target.target_id]
+            )
+            zcat = Table.read(redrock_file, "REDSHIFTS")
+            keep = zcat["TARGETID"] == target.target_id
+            zcat = zcat[keep]
+            spectra.extra_catalog = zcat
+            target_spectra.append(spectra)
+        except:
+            failures.append(target.target_id)
+    if len(failures):
+        raise DesiApiException("unable to locate spectra for targets", failures)
     return target_spectra
+
+
+def filter_spectra(spectra: Spectra, options: Dict) -> Spectra:
+    return spectra

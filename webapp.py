@@ -1,7 +1,16 @@
 #!/usr/bin/env ipython3
 
-from flask import Flask, send_file, send_from_directory
+from flask import (
+    Flask,
+    Response,
+    redirect,
+    send_file,
+    request,
+    abort,
+)
 from typing import List
+
+from json import dumps
 
 from build_spectra import handle
 import datetime as dt
@@ -19,9 +28,18 @@ app = Flask(__name__)
 app.config.from_object(__name__)
 app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
 
+DOC_URL = "https://github.com/VivianWilde/desi-api-drafting/blob/main/userdoc.org"
 
-@app.route("/api/v1/<command>/<release>/<endpoint>/<path:params>")
-def top_level(command: str, release: str, endpoint: str, params: str):
+
+@app.route("/")
+@app.route("/api")
+@app.route("/api/v1")
+def show_doc():
+    return redirect(DOC_URL)
+
+
+@app.route("/api/v1/<command>/<release>/<endpoint>/<path:endpoint_params>", methods=["GET"])
+def handle_get(command: str, release: str, endpoint: str, endpoint_params: str):
     """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
 
     :param command: One of Download/Plot, specifies whether to return raw FITS data or an interactive HTML plot.
@@ -30,45 +48,62 @@ def top_level(command: str, release: str, endpoint: str, params: str):
     :param params: Endpoint-specific parameters, such as a tile ID and list of fibers, a list of target IDs, or a (ra, dec) point and radius.
     :returns: None, but either renders HTML or sends a file as a response.
     """
-    req_time = dt.datetime.now()
-    log("params: ", params)
-    req = build_request(command, release, endpoint, params)
-    log("request: ", req)
-
-    response_file = build_response_file(req, req_time)
-    log("response file: ", response_file)
-    if req.command == Command.PLOT:
-        return send_file(response_file)
-    else:
-        return send_file(
-            response_file, download_name=f"desi_api_{req_time.isoformat()}.fits"
+    log("params: ", endpoint_params)
+    try:
+        req = build_request(
+            command, release, endpoint, endpoint_params, request.args.to_dict()
         )
+        validate(req)
+    except (DesiApiException, KeyError) as e:
+        invalid_request_error(e)
+    else:
+        return process_request(req)
 
 
-def validate(req: ApiRequest):
-    # switch case on req type
-    pass
+@app.route("/api/v1/post", methods=["POST"])
+def handle_post():
+    """Handle a post request with API call parameters and optionally filters defined in the form data as key-value pairs
+
+    :returns: None, but either renders HTML or sends a file as response
+
+    """
+
+    # TODO: Handle sensible ways to do paths for params, so no <tileid>/<fiberids>
+
+    data = request.form
+    log("request: ", data)
+    param_keys = ["command", "release", "endpoint", "params"]
+    filters = {k: v for (k, v) in data.items() if k not in param_keys}
+    try:
+        req = build_request(
+            data["command"], data["release"], data["endpoint"], data["params"], filters
+        )
+        validate(req)
+    except (DesiApiException, KeyError) as e:
+        invalid_request_error(e)
+    else:
+        return process_request(req)
 
 
-def validate_radec(params: RadecParameters):
-    pass
-
-
-def validate_tile(params: TileParameters):
-    pass
-
-
-def validate_target(params: TargetParameters):
-    pass
-
-
-def build_request(command: str, release: str, endpoint: str, params: str) -> ApiRequest:
+def build_request(
+    command: str, release: str, endpoint: str, params: str, filters: Dict
+) -> ApiRequest:
     """Parse an API request path into an ApiRequest object. The parameters represent the components of the request URL.
 
     :returns: A parsed ApiRequest object.
     """
-    command_enum = Command[command.upper()]
-    endpoint_enum = Endpoint[endpoint.upper()]
+    # TODO: Descriptive error feedback
+
+    try:
+        command_enum = Command[command.upper()]
+    except KeyError:
+        raise DesiApiException(f"command must be one of DOWNLOAD or PLOT, not {command}")
+
+    try:
+        endpoint_enum = Endpoint[endpoint.upper()]
+    except KeyError:
+        raise DesiApiException(f"endpoint must be one of TILE, TARGETS, RADEC, not {endpoint}")
+
     release_canonised = release.lower()
 
     formal_params = build_params(endpoint_enum, params.split("/"))
@@ -78,6 +113,7 @@ def build_request(command: str, release: str, endpoint: str, params: str) -> Api
         release=release_canonised,
         endpoint=endpoint_enum,
         params=formal_params,
+        filters=filters,
     )
 
 
@@ -88,19 +124,91 @@ def build_params(endpoint: Endpoint, params: List[str]) -> Parameters:
     :param params: A list of strings representing parameters in the API request, such as ['80605', '10,234,2761,3951']
     :returns: A Parameters object representing the parameters specified in the request.
     """
+    try:
+        if endpoint == Endpoint.RADEC:
+            ra, dec, radius = parse_list_float(params[0])
+            return RadecParameters(ra, dec, radius)
+        elif endpoint == Endpoint.TARGETS:
+            return TargetParameters(parse_list_int(params[0]))
+        elif endpoint == Endpoint.TILE:
+            return TileParameters(int(params[0]), parse_list_int(params[1]))
+    except:
+        raise DesiApiException(f"invalid endpoint parameters for {endpoint}")
 
-    if endpoint == Endpoint.RADEC:
-        ra, dec, radius = parse_list_float(params[0])
-        return RadecParameters(ra, dec, radius)
-    elif endpoint == Endpoint.TARGETS:
-        return TargetParameters(parse_list_int(params[0]))
-    elif endpoint == Endpoint.TILE:
-        return TileParameters(int(params[0]), parse_list_int(params[1]))
+
+def validate(req: ApiRequest):
+    params = req.params
+    if req.endpoint == Endpoint.RADEC:
+        validate_radec(params)
+    elif req.endpoint == Endpoint.TARGETS:
+        validate_target(params)
+    elif req.endpoint == Endpoint.TILE:
+        validate_tile(params)
+    else:
+        raise DesiApiException("invalid endpoint")
 
 
-def build_response_file(
-    req: ApiRequest, request_time: dt.datetime 
-) -> str:
+def validate_radec(params: RadecParameters):
+    if params.radius > 60:
+        raise DesiApiException("radius must be <= 60 arcseconds")
+
+
+def validate_tile(params: TileParameters):
+    if len(params.fibers) > 500:
+        raise DesiApiException("cannot have more than 500 fiber IDs")
+
+
+def validate_target(params: TargetParameters):
+    if len(params.target_ids) > 500:
+        raise DesiApiException("cannot have more than 500 target IDs")
+
+
+
+
+def invalid_request_error(e: Exception):
+    """Take an error resulting from an invalid request, and wrap it in a Flask response"""
+    info = dumps(
+        {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}
+    )
+    abort(Response(info), 400)
+
+
+def process_request(req: ApiRequest):
+    """A simple wrapper around handle_request that does some error-handling"""
+    try:
+        return handle_request(req)
+    except DesiApiException as e:
+        info = dumps(
+            {
+                "Request": repr(req),
+                "Error": str(e),
+                "Help": f"See {DOC_URL} for an overview of request syntax",
+            }
+        )
+        abort(Response(info), 500)
+
+
+def handle_request(req: ApiRequest):
+    """Processes an ApiRequest and returns the corresponding file, either HTML or FITS.
+
+    :param req: An ApiRequest object
+    :returns: An HTML or FITS file wrapped in Flask's send_file function.
+
+    """
+
+    req_time = dt.datetime.now()
+    log("request: ", req)
+    response_file = build_response_file(req, req_time)
+    log("response file: ", response_file)
+    if req.command == Command.PLOT:
+        return send_file(response_file)
+    else:
+        return send_file(
+            response_file, download_name=f"desi_api_{req_time.isoformat()}.fits"
+        )
+
+
+def build_response_file(req: ApiRequest, request_time: dt.datetime) -> str:
     """Build the file asked for by REQ, or reuse an existing one if it is sufficiently recent, and return the path to it
 
     :param req: An ApiRequest object
@@ -110,8 +218,9 @@ def build_response_file(
     cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
     if os.path.isdir(cache_path):
         cached_responses = os.listdir(cache_path)
-        most_recent = max(cached_responses, key=basename)
+        most_recent = max(cached_responses, key=basename) if len(cached_responses) else dt.datetime.utcfromtimestamp(0).isoformat()
         # Filenames are of the form <timestamp>.<ext>, the key filters out extension
+        # If there are no cached responses, use 1970 as the time so it doesn't get selected.
         print("recent", basename(most_recent))
         age = request_time - dt.datetime.fromisoformat(basename(most_recent))
         print("age", age)
@@ -141,12 +250,12 @@ def create_file(cmd: Command, spectra: Spectra, save_dir: str, file_name: str) -
             desispec.io.write_spectra(target_file, spectra)
             return target_file
         except Exception as e:
-            raise DesiApiException(e)
+            raise DesiApiException("unable to create spectra file")
     elif cmd == Command.PLOT:
         target_file = f"{save_dir}/{file_name}.html"
         return write_html(spectra, save_dir, file_name)
     else:
-        raise DesiApiException("Invalid Command (must be PLOT or DOWNLOAD)")
+        raise DesiApiException("invalid command (must be PLOT or DOWNLOAD)")
 
 
 def write_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
@@ -162,13 +271,13 @@ def write_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
         )
         return f"{save_dir}/{file_name}.html"
     except Exception as e:
-        raise DesiApiException(e)
+        raise DesiApiException("unable to produce plot")
 
 
 # For testing the pipeline from request -> build file, for testing on NERSC pre web-app
 def test_file_gen(request_args: str) -> str:
     command, release, endpoint, *params = request_args.split("/")
-    req = build_request(command, release, endpoint, "/".join(params))
+    req = build_request(command, release, endpoint, "/".join(params), {})
     response_file = build_response_file(req, dt.datetime.now())
     return response_file
 
