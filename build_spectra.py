@@ -1,7 +1,7 @@
 #!/usr/bin/env ipython3
 import os
 import desispec.io, desispec.spectra
-from math import sqrt
+from math import sqrt, radians, cos
 from typing import List, Tuple
 from models import *
 from desispec.spectra import Spectra
@@ -49,11 +49,14 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     targets = retrieve_targets(release)
 
     def distfilter(target: Target) -> bool:
-        return sqrt((ra - target.ra) ** 2 + (dec - target.dec) ** 2) <= radius
+        ra_diff = (ra - target.ra)*cos(radians(dec))
+        dec_diff = (dec - target.dec)
+        return sqrt(ra_diff**2 + dec_diff**2) < radius/3600
 
     relevant_targets = [
         t for t in targets if distfilter(t)
     ]  # TODO probably inefficient
+    log(f'Retrieving {len(relevant_targets)} targets')
     spectra = retrieve_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
