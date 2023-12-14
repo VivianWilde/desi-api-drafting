@@ -144,6 +144,12 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
         else (zcat["ZCAT_PRIMARY"] == True)
     )
     zcat = zcat[keep]
+
+    missing = np.isin(target_ids, zcat["TARGETID"], invert=True)
+    if np.any(missing):
+        target_ids = np.asarray(target_ids)
+        raise DesiApiException("unable to find targets:", target_ids[missing])
+
     targets = []
     for target in zcat:
         targets.append(
@@ -157,9 +163,7 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
                 dec=target["TARGET_DEC"],
             )
         )
-        target_ids.remove(target["TARGETID"])
-    if len(target_ids):
-        raise DesiApiException("unable to find targets:", target_ids)
+        
     return targets
 
 
