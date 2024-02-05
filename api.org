@@ -416,7 +416,6 @@ def compose_masks(arr, filters):
 * TODO <2024-01-29 Mon>
 - Refactor to have Targets be dataframe
 - Build up the filter system in =retrieve_targets=.
--
 ** Catalogue Endpoint
 - All existing endpoints get nested under spectra, so that BASE/<specprod/spectra/<endpoint/<args>
 - New endpoint /zcat/<download|plot>/<endpoint>/<args>

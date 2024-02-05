@@ -6,12 +6,15 @@ from typing import List, Tuple
 from models import *
 from desispec.spectra import Spectra
 import fitsio
+import operator
 from astropy.table import Table
 import numpy as np
 from utils import log
 
 # TODO: Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.
+
+# TODO params and datarelease should be dfs as well
 
 
 def handle(req: ApiRequest) -> Spectra:
@@ -27,11 +30,11 @@ def handle(req: ApiRequest) -> Spectra:
     log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
-        return tile(release, params.tile, params.fibers, filters)
+        return tile(release, params.tile, params.fibers, req.filters)
     elif req.endpoint == Endpoint.TARGETS:
-        return targets(release, params.target_ids, filters)
+        return targets(release, params.target_ids, req.filters)
     elif req.endpoint == Endpoint.RADEC:
-        return radec(release, params.ra, params.dec, params.radius, filters)
+        return radec(release, params.ra, params.dec, params.radius, req.filters)
     else:
         raise DesiApiException("Invalid Endpoint")
 
@@ -48,19 +51,21 @@ def radec(
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
     :returns: A combined Spectra of all such objects in the data release
     """
-    targets = retrieve_targets(release)
+    targets = retrieve_targets_filtered(release, filters=filters)
 
-    def distfilter(target: Target) -> bool:
-        return sqrt((ra - target.ra) ** 2 + (dec - target.dec) ** 2) <= radius
+    distfilter = (ra - targets["TARGET_RA"]) ** 2 + (
+        dec - targets["TARGET_DEC"]
+    ) ** 2 <= radius
+    # TODO test this.
+    relevant_targets = targets[distfilter]
 
-    relevant_targets = [
-        t for t in targets if distfilter(t)
-    ]  # TODO probably inefficient
     spectra = retrieve_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
 
-def tile(release: DataRelease, tile: int, fibers: List[int], filters: Dict) -> Spectra:
+def tile(
+    release: DataRelease, tile: int, fibers: List[int], filters: Filter
+) -> Spectra:
     """
     Combine spectra from specified FIBERS within a TILE and return it
 
@@ -97,7 +102,7 @@ def tile(release: DataRelease, tile: int, fibers: List[int], filters: Dict) -> S
         return spectra
 
 
-def targets(release: DataRelease, target_ids: List[int], filters: Dict) -> Spectra:
+def targets(release: DataRelease, target_ids: List[int], filters: Filter) -> Spectra:
     """
     Combine spectra of all target objects with the specified TARGET_IDs and return the result
 
@@ -106,11 +111,13 @@ def targets(release: DataRelease, target_ids: List[int], filters: Dict) -> Spect
     :returns: A Spectra object combining individual spectra for all targets
     """
 
-    target_objects = retrieve_targets(release, target_ids)
+    target_objects = retrieve_targets_filtered(release, target_ids, filters)
     return desispec.spectra.stack(retrieve_target_spectra(release, target_objects))
 
 
-def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[Target]:
+def retrieve_targets_filtered(
+    release: DataRelease, target_ids: List[int] = [], filters: Filter = dict()
+) -> List[Target]:
     """
     For each TARGET_ID, read the corresponding target metadata into a Target object.
 
@@ -118,53 +125,70 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
     :param target_ids: The list of target identifiers to build objects for. If this list is empty, blindly reads all targets
     :returns: A list of target objects, each containing metadata for a target with a specified target_id
     """
+    desired_columns = [
+        "TARGETID",
+        "HEALPIX",
+        "SURVEY",
+        "PROGRAM",
+        "ZCAT_PRIMARY",
+        "TARGET_RA",
+        "TARGET_DEC",
+    ]
+
+    # Also read in metadata we want to filter on
+    for k in filters.keys():
+        desired_columns.append(k)
+
     zcatfile = release.healpix_fits
     log("reading target zcat info from: ", zcatfile)
     try:
         zcat = fitsio.read(
             zcatfile,
             "ZCATALOG",
-            columns=[
-                "TARGETID",
-                "HEALPIX",
-                "SURVEY",
-                "PROGRAM",
-                "ZCAT_PRIMARY",
-                # We don't always need these, but save them so we can reuse this function. Maybe make it optional if this has high overhead.
-                "TARGET_RA",
-                "TARGET_DEC",
-            ],
+            columns=desired_columns,
         )
     except:
         raise DesiApiException("unable to read target information")
+
+    # TODO: Make keep more stringent based on filters.
+
     keep = (
         ((zcat["ZCAT_PRIMARY"] == True) & np.isin(zcat["TARGETID"], target_ids))
         if len(target_ids)
         else (zcat["ZCAT_PRIMARY"] == True)
     )
+
+
     zcat = zcat[keep]
-    targets = []
-    for target in zcat:
-        targets.append(
-            Target(
-                target_id=target["TARGETID"],
-                healpix=target["HEALPIX"],
-                survey=target["SURVEY"],
-                program=target["PROGRAM"],
-                zcat_primary=target["ZCAT_PRIMARY"],
-                ra=target["TARGET_RA"],
-                dec=target["TARGET_DEC"],
-            )
-        )
-        target_ids.remove(target["TARGETID"])
-    if len(target_ids):
+
+    # Check for missing IDs
+    missing_ids = []
+    found_ids = set(zcat["TARGETID"])
+    for i in target_ids:
+        if i not in found_ids:
+            missing_ids.append(i)
+    if len(missing_ids):
         raise DesiApiException("unable to find targets:", target_ids)
-    return targets
 
-def retrieve_targets_filtered(release: DataRelease, target_ids: List[int] = [], filters: Dict = dict()) -> List[Target]:
-    # Step 1: TODO: Modify the `keep` index/clauses from above, based on assembling clauses from the filters
+    filtered_keep = np.ones(zcat.shape)
+    for k, v in filters.items():
+        clause = clause_from_filter(k,v,zcat)
+        keep = np.logical_and(filtered_keep, clause)
+    return zcat[keep]
 
-    # Step 2: TODO: Look at the list of filters. For each filter, read in the corresponding column to the target objects as well.
+
+def clause_from_filter(key: str, value: str, targets: DataFrame):
+    operator_fns = {">": operator.gt, "=": operator.eq, "<": operator.lt}
+    op = value[0]
+    func = operator_fns[op]
+    value = value[1:] # Actual value. TODO: Handle casting when appropriate
+    return func(targets[key],value)
+
+
+
+
+    return (target[key]==val) # TODO Make more sophisticated, with parsing operators, etc.
+
 
 
 def retrieve_target_spectra(
@@ -185,30 +209,30 @@ def retrieve_target_spectra(
         try:
             source_file = desispec.io.findfile(
                 "coadd",
-                survey=target.survey,
-                faprogram=target.program,
+                survey=target["SURVEY"],
+                faprogram=target["PROGRAM"],
                 groupname="healpix",
-                healpix=target.healpix,
+                healpix=target["HEALPIX"],
                 specprod_dir=release.directory,
             )
             redrock_file = desispec.io.findfile(
                 "redrock",
-                survey=target.survey,
-                faprogram=target.program,
+                survey=target["SURVEY"],
+                faprogram=target["PROGRAM"],
                 groupname="healpix",
-                healpix=target.healpix,
+                healpix=target["HEALPIX"],
                 specprod_dir=release.directory,
             )
             spectra = desispec.io.read_spectra(
-                source_file, targetids=[target.target_id]
+                source_file, targetids=[target["TARGETID"]]
             )
             zcat = Table.read(redrock_file, "REDSHIFTS")
-            keep = zcat["TARGETID"] == target.target_id
+            keep = zcat["TARGETID"] == target["TARGETID"]
             zcat = zcat[keep]
             spectra.extra_catalog = zcat
             target_spectra.append(spectra)
         except:
-            failures.append(target.target_id)
+            failures.append(target["TARGETID"])
     if len(failures):
         raise DesiApiException("unable to locate spectra for targets", failures)
     return target_spectra

@@ -3,7 +3,7 @@ from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass
 import datetime as dt
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Mapping
 import os
 
 from werkzeug.datastructures import ImmutableMultiDict
@@ -13,13 +13,19 @@ from werkzeug.datastructures import ImmutableMultiDict
 # Unused for now
 # TODO: Fix for docker edition
 SQL_DIR = f"{os.getenv('home')}/desi-sql"
-SPECTRO_REDUX= os.getenv("DESI_SPECTRO_REDUX")
+SPECTRO_REDUX = os.getenv("DESI_SPECTRO_REDUX")
 CACHE_DIR = os.path.expanduser("~/tmp/desi-api-cache")
 
 
 CUTOFF = dt.timedelta(
     hours=1
 )  # if age > cutoff, a response is considered stale and we recompute
+
+
+# Type aliases my beloved
+DataFrame = Mapping[str, Any]  # Type alias
+Target = DataFrame
+Filter = Mapping[str, str]
 
 
 def canonise_release_name(release: str) -> str:
@@ -39,9 +45,9 @@ def canonise_release_name(release: str) -> str:
         return translations[release]
     raise DesiApiException(f"release must be one of FUJI or IRON, not {release}")
 
+
 class DesiApiException(Exception):
     pass
-
 
 
 class Command(Enum):
@@ -56,11 +62,11 @@ class Endpoint(Enum):
     TARGETS = 2
     RADEC = 3
 
+
 class Parameters:
     @property
-    def canonical(self)-> Tuple:
+    def canonical(self) -> Tuple:
         return ()
-
 
 
 @dataclass
@@ -70,8 +76,9 @@ class RadecParameters(Parameters):
     radius: float
 
     @property
-    def canonical(self)->Tuple:
+    def canonical(self) -> Tuple:
         return (self.ra, self.dec, self.radius)
+
 
 @dataclass
 class TileParameters(Parameters):
@@ -79,7 +86,7 @@ class TileParameters(Parameters):
     fibers: List[int]
 
     @property
-    def canonical(self)->Tuple:
+    def canonical(self) -> Tuple:
         return (self.tile, sorted(self.fibers))
 
 
@@ -92,14 +99,13 @@ class TargetParameters(Parameters):
         return tuple(sorted(self.target_ids))
 
 
-
 @dataclass()
 class ApiRequest:
     command: Command  # should be enum really
     release: str
     endpoint: Endpoint  # tile/target/radec
     params: Parameters
-    filters: Dict
+    filters: Filter
 
     def get_cache_path(self) -> str:
         """Return the path (relative to cache dir) to write this request to
@@ -109,22 +115,6 @@ class ApiRequest:
 
     def validate(self) -> bool:
         return True
-
-
-@dataclass()
-class Target:
-    target_id: int
-    healpix: int
-    survey: str
-    program: str
-    zcat_primary: bool
-    ra: float
-    dec: float
-    # This works well. So we can populate the target objects in a separate function, and then just have our functions use them.
-
-    @property
-    def healpix_group(self) -> int:
-        return self.healpix // 100
 
 
 @dataclass
@@ -139,9 +129,9 @@ class DataRelease:
     def __init__(self, name: str) -> None:
         self.name = name.lower()
         self.directory = f"{SPECTRO_REDUX}/{self.name}"
-        self.tile_fits = f"{self.directory}/zcatalog/zall-tilecumulative-{self.name}.fits"
+        self.tile_fits = (
+            f"{self.directory}/zcatalog/zall-tilecumulative-{self.name}.fits"
+        )
         self.tile_dir = f"{self.directory}/tiles/cumulative"
         self.healpix_fits = f"{self.directory}/zcatalog/zall-pix-{self.name}.fits"
         self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
-
-
