@@ -38,8 +38,10 @@ def show_doc():
     return redirect(DOC_URL)
 
 
-@app.route("/api/v1/<command>/<release>/<endpoint>/<path:endpoint_params>", methods=["GET"])
-def handle_get(command: str, release: str, endpoint: str, endpoint_params: str):
+@app.route(
+    "/api/v1/spectra/<command>/<release>/<endpoint>/<path:endpoint_params>", methods=["GET"]
+)
+def handle_get_spectra(command: str, release: str, endpoint: str, endpoint_params: str):
     """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
 
     :param command: One of Download/Plot, specifies whether to return raw FITS data or an interactive HTML plot.
@@ -67,9 +69,7 @@ def handle_post():
     :returns: None, but either renders HTML or sends a file as response
 
     """
-
     # TODO: Handle sensible ways to do paths for params, so no <tileid>/<fiberids>
-
     data = request.form
     log("request: ", data)
     param_keys = ["command", "release", "endpoint", "params"]
@@ -86,7 +86,7 @@ def handle_post():
 
 
 def build_request(
-    command: str, release: str, endpoint: str, params: str, filters: Dict
+    command: str, release: str, endpoint: str, params: str | Dict, filters: Dict
 ) -> ApiRequest:
     """Parse an API request path into an ApiRequest object. The parameters represent the components of the request URL.
 
@@ -97,16 +97,24 @@ def build_request(
     try:
         command_enum = Command[command.upper()]
     except KeyError:
-        raise DesiApiException(f"command must be one of DOWNLOAD or PLOT, not {command}")
+        raise DesiApiException(
+            f"command must be one of DOWNLOAD or PLOT, not {command}"
+        )
 
     try:
         endpoint_enum = Endpoint[endpoint.upper()]
     except KeyError:
-        raise DesiApiException(f"endpoint must be one of TILE, TARGETS, RADEC, not {endpoint}")
+        raise DesiApiException(
+            f"endpoint must be one of TILE, TARGETS, RADEC, not {endpoint}"
+        )
 
     release_canonised = release.lower()
 
-    formal_params = build_params(endpoint_enum, params.split("/"))
+    formal_params = (
+        build_params_from_strings(endpoint_enum, params.split("/"))
+        if isinstance(params, str)
+        else build_params_from_dict(endpoint_enum, params)
+    )
 
     return ApiRequest(
         command=command_enum,
@@ -117,7 +125,23 @@ def build_request(
     )
 
 
-def build_params(endpoint: Endpoint, params: List[str]) -> Parameters:
+def build_params_from_dict(endpoint: Endpoint, params: Dict) -> Parameters:
+    # TODO: Replace keys with consts, Kapstan style.
+    try:
+        if endpoint == Endpoint.RADEC:
+            ra, dec, radius = [float(params[key]) for key in ["ra", "dec", "radius"]]
+            return RadecParameters(ra, dec, radius)
+        elif endpoint == Endpoint.TARGETS:
+            return TargetParameters(parse_list_int(params["target_ids"]))
+        elif endpoint == Endpoint.TILE:
+            return TileParameters(
+                int(params["tile_id"]), parse_list_int(params["fiber_ids"])
+            )
+    except:
+        raise DesiApiException(f"invalid endpoint parameters for {endpoint}")
+
+
+def build_params_from_strings(endpoint: Endpoint, params: List[str]) -> Parameters:
     """Build a Parameters object out of the API parameters (a list of arguments)
 
     :param endpoint: The type of the API request as an enum: One of Tile/Target/Radec
@@ -161,8 +185,6 @@ def validate_tile(params: TileParameters):
 def validate_target(params: TargetParameters):
     if len(params.target_ids) > 500:
         raise DesiApiException("cannot have more than 500 target IDs")
-
-
 
 
 def invalid_request_error(e: Exception):
@@ -218,7 +240,11 @@ def build_response_file(req: ApiRequest, request_time: dt.datetime) -> str:
     cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
     if os.path.isdir(cache_path):
         cached_responses = os.listdir(cache_path)
-        most_recent = max(cached_responses, key=basename) if len(cached_responses) else dt.datetime.utcfromtimestamp(0).isoformat()
+        most_recent = (
+            max(cached_responses, key=basename)
+            if len(cached_responses)
+            else dt.datetime.utcfromtimestamp(0).isoformat()
+        )
         # Filenames are of the form <timestamp>.<ext>, the key filters out extension
         # If there are no cached responses, use 1970 as the time so it doesn't get selected.
         print("recent", basename(most_recent))

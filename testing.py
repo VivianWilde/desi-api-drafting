@@ -68,7 +68,6 @@ def test_get_tile():
 def test_post_targets():
     data = {"command":"download", "release":"fuji","endpoint":"targets","params":"39628473198710603,39632946386177593,39632956452508085,39632971434560784", "survey":"main"}
     resp = requests.post("http://127.0.0.1:5000/api/v1/post", data=data)
-    print()
     return resp
 
 

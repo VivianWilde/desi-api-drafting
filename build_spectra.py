@@ -27,16 +27,18 @@ def handle(req: ApiRequest) -> Spectra:
     log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
-        return tile(release, params.tile, params.fibers)
+        return tile(release, params.tile, params.fibers, filters)
     elif req.endpoint == Endpoint.TARGETS:
-        return targets(release, params.target_ids)
+        return targets(release, params.target_ids, filters)
     elif req.endpoint == Endpoint.RADEC:
-        return radec(release, params.ra, params.dec, params.radius)
+        return radec(release, params.ra, params.dec, params.radius, filters)
     else:
         raise DesiApiException("Invalid Endpoint")
 
 
-def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra:
+def radec(
+    release: DataRelease, ra: float, dec: float, radius: float, filters: Dict
+) -> Spectra:
     """
     Find all objects within RADIUS of the point (RA, DEC), combine and return their spectra
 
@@ -58,7 +60,7 @@ def radec(release: DataRelease, ra: float, dec: float, radius: float) -> Spectra
     return desispec.spectra.stack(spectra)
 
 
-def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
+def tile(release: DataRelease, tile: int, fibers: List[int], filters: Dict) -> Spectra:
     """
     Combine spectra from specified FIBERS within a TILE and return it
 
@@ -74,8 +76,8 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
 
     try:
         spectra = desispec.io.read_tile_spectra(
-            tile,
             latest,
+            tile,
             fibers=fibers,
             coadd=True,
             redrock=True,
@@ -95,7 +97,7 @@ def tile(release: DataRelease, tile: int, fibers: List[int]) -> Spectra:
         return spectra
 
 
-def targets(release: DataRelease, target_ids: List[int]) -> Spectra:
+def targets(release: DataRelease, target_ids: List[int], filters: Dict) -> Spectra:
     """
     Combine spectra of all target objects with the specified TARGET_IDs and return the result
 
@@ -158,6 +160,11 @@ def retrieve_targets(release: DataRelease, target_ids: List[int] = []) -> List[T
     if len(target_ids):
         raise DesiApiException("unable to find targets:", target_ids)
     return targets
+
+def retrieve_targets_filtered(release: DataRelease, target_ids: List[int] = [], filters: Dict = dict()) -> List[Target]:
+    # Step 1: TODO: Modify the `keep` index/clauses from above, based on assembling clauses from the filters
+
+    # Step 2: TODO: Look at the list of filters. For each filter, read in the corresponding column to the target objects as well.
 
 
 def retrieve_target_spectra(

@@ -296,10 +296,20 @@ In the POST, pass them via a dictionary.
 Internally, how to store them? I prefer objects but dicts are fine.
 Objects let us canonise.
 
+So recapping, currently we read params as a slashed string, parse them into an object.
 
+For POST requests, we need to read params in as a json/map.
+High-level options are parse them into
+- Object :: Urgh. The object structure will
+- Map :: DESI people probably prefer maps to objects.
 
-
-
+  Either way, most standard way to do things is to modify =build_params= so that either a) acts differently on maps vs strings or b) accepts another parameter =post?= which tells it how to behave.
+  The first seems nicest. So that's that.
+  Ok. So that's solved conceptually.
+  Making it an object will be tedious, making a dictionary is just identity.
+  Although if we want to introduce aliases for formal param names, dictionary and object are equally tedious.
+  For now stick with object
+  TODO: Ask Stephen about object vs dictionary.
 
 ** Optional Params
 *** Dict
@@ -311,3 +321,105 @@ Basic filters are
 Have a final function that takes in a spectra object (or a set of spectra objects) and a dictionary and interprets them via filtration.
 
 Then we can formalise it as enums
+
+So far we have a story for reading in filters and recalling them.
+What remains is a story for doing stuff with them.
+**** Preprocessing
+Before we hand it off to endpoint handlers
+This seems fine. We'll enforce the abstraction that filters should be applied individually and compose. So assoc/commute, in some sense.
+So we can just have a thing that walks down the list of keys, and for each actually specified option, does a thing.
+**** Within handlers
+For endpoint-specific filters.
+This'll involve adding more abstraction/modularity to the handlers, currently they're very do-one-thing.
+TODO think about this.
+**** Postprocessing
+Unlikely, but for trimming out stuff after the handlers have read it in.
+* Email <2024-01-17 Wed>
+Hi Stephen,
+
+I've been working on the API a bit. I'm about to test it but I've added some code so that POST requests should just work, and I've added some missing docstrings.
+
+I wanted to ask about the filters feature you mentioned. Currently the code has hooks to read in these filters and save them as part of a request, but no way to act on them or have them modify the result.
+
+As I'm imagining it, the two main kinds of filters (from an implementation perspective) are
+a) Those that we apply after getting the normal result from the endpoint function. For instance, filtering out targets that satisfy a certain property or have a certain type, after reading in spectra/data for a specified list of targets.
+b) Filters that change how we call the endpoint function. For instance, ~survey=main~ might translate into an additional parameter passed to our call to =desispec.io.read_tile_spectra=.
+
+Firstly, I wanted to ask if there are other types/implementations of filters that I'm not thinking of.
+Secondly, I wanted to ask how many filter options of type (b) you foresee there being - if it's a lot, we'll need to come up with a pattern to implement those, but if that's a rare case we could just implement it ad-hoc/case-by-case.
+** Resp
+For the filters, I think we'll use this for the radec endpoint, but not the tile or targets endpoint.  For the tile or targets endpoint, the user is already specifying a specific set of fibers/targets to load, so we just give it to them.  But the radec endpoint is more of a query where the user doesn't know ahead of time which targets might match the location cut, and they might want to also put other requirements on the matching targets.  Since reading the actual spectra is expensive, I think we should implement this mid-stream, after reading the redshift catalog (that we use for TARGET_RA, TARGET_DEC distance cuts), then apply any additional filters to trim down the target list before proceeding with reading the spectra/coadd files to get the actual spectra.  Does that make sense?
+
+At minimum we should support equality filters (e.g. SURVEY='main'), but it could also be handy to support less-than/greater-than (e.g. Z>2).  If multiple filters are specified, I think it is ok to define those as meaning the logical AND of all the filters (i.e. a target has to pass all of them) and we don't need to invent the syntax to support both AND and OR.  That being said, if there is an industry standard way for specifying generic selection filters in a URL we could consider that.
+
+Another gotcha is that for efficiency retrieve_targets only reads a subset of the columns in the zcatalog file, but the user might want to filter on other columns.  So I think we'll also need to check the filters for any non-default columns, and add those to the list to read.  If the user specifies a column that doesn't exist in the zcatalog file, return some informative error.
+
+I think we should seek a semi-generic solution for filtering on any column in the zcatalog file instead of implementing them on a custom case-by-case basis.
+
+Does that make sense?
+*** Filters
+So we can have arbitrary post-endpoint filters.
+
+We can support 'only use targets with metadata property x' by translating those into filters in retrieve_targets, before we read any spectra
+
+
+So the basic idea is that most filter logic should be concentrated in retrieve_targets.
+What we can do is take the list of filters, add the keys/category names to the list of cols we read in, and then our targets exist as.
+This also suggests that treating targets, etc. as dicts we can index into rather than strict objects is a much better idea.
+Refactor time. Oh well.
+So then filters contain the information "category, boolean expr". Using eval is suicidal of course and I don't hate myself that much.
+**** Composing Filters
+We only compose with AND.
+So abstractly applying filters successively is fine.
+**** Equality filters
+Easy enough. The trick is translating values to floats/ints/whatever in a context-aware way.
+**** Generic numerics
+We only really need to support \ge, >, \le, <
+Nice, right?
+
+In POST requests, the filters sub-object would be flat with key-values looking like "category":">=5", "category":"=5" or just "category":"5", etc. So keys are categories, values are the boolean filter.
+We can parse these without too much effort.
+***** Abstracted parsing because we're normal
+Split into operator and value
+Dict that maps operators to binary boolean predicates
+Curry lookup[operator] with the value to get a one-arg boolean func
+Use that curried func as a filter, basically.
+Alternatively, if numpy is weird, remember how numpy does index filtering and translate directly into numpy clauses or whatever weird stuff they do.
+* Email
+Hi Stephen,
+Based on this, I have a rough idea for filter implementation - let me know if it seems over- or under- engineered in any way, or if you think it's good to start implementing/hacking about with.
+
+- User supplies filters of the form ~<key> <operator> <value>~, where operator is one of =,>,<. For instance ~SURVEY=main~ or ~Z>2~ would both be valid filters.
+- We translate/parse the filter into a numpy array mask, and represent the `combined filter' as a logical AND of array masks (numpy can do this nicely as far as I know)
+- We also AND in our base clauses, like ~np.isin(zcat["TARGETID"], target_ids))~ to get our final ~keep~ mask.
+- Then we just do ~zcat=zcat[keep]~ and process the zcat as normal
+
+The second part of this that I'm still working on is adding metadata to the target objects we read in and send back. My basic plan is to:
+- Refactor Target objects to be dictionaries so we can read in arbitrary metadata/columns
+- When reading target metadata, read the basic fields, but also scan the keys of the filters passed in, and add those keys to the cols read in by ~fitsio.read~, and also add them to our target objects
+- We'd do some minimal canonisation such as enforcing consistent case - ideally the filter option titles will match up with the names we use for columns internally.
+- After that, I'm not sure exactly what we'd do with that additional metadata - we could mainly use it for post-processing filters, I imagine. Not sure about how sending it back to the user would work - if we want to do anything like that, I imagine we'd have to embed the metadata in a Spectra object somehow?
+
+#+begin_src python
+def func(key, operator, value):
+    opfunc = "func based on string val of operator"
+    return lambda target: opfunc(target[key],value)
+
+def mask(key, op, val):
+    fn = func(key, op, val)
+    return lambda arr: arr[fn(arr)]
+
+def compose_masks(arr, filters):
+   masks = tuple(mask(*f) for f in filters)
+   return arr[np.logical_and(*masks)]
+#+end_src
+* TODO <2024-01-29 Mon>
+- Refactor to have Targets be dataframe
+- Build up the filter system in =retrieve_targets=.
+-
+** Catalogue Endpoint
+- All existing endpoints get nested under spectra, so that BASE/<specprod/spectra/<endpoint/<args>
+- New endpoint /zcat/<download|plot>/<endpoint>/<args>
+- Does a dry run, read metadata of targets that would be accessed (via retrieve targets, probably) and spits out as a fits file.
+- Eventually make it also send html tables if asked, but later.
+- Longterm feature: Metadata catalogue would like multiple download options.
