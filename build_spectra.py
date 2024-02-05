@@ -1,7 +1,7 @@
 #!/usr/bin/env ipython3
 import os
 import desispec.io, desispec.spectra
-from math import sqrt
+from math import sqrt, radians, cos
 from typing import List, Tuple
 from models import *
 from desispec.spectra import Spectra
@@ -58,7 +58,7 @@ def radec(
     ) ** 2 <= radius
     # TODO test this.
     relevant_targets = targets[distfilter]
-
+    log(f'Retrieving {len(relevant_targets)} targets')
     spectra = retrieve_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
@@ -183,13 +183,6 @@ def clause_from_filter(key: str, value: str, targets: DataFrame):
     func = operator_fns[op]
     value = value[1:] # Actual value. TODO: Handle casting when appropriate
     return func(targets[key],value)
-
-
-
-
-    return (target[key]==val) # TODO Make more sophisticated, with parsing operators, etc.
-
-
 
 def retrieve_target_spectra(
     release: DataRelease, targets: List[Target]
