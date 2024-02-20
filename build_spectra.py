@@ -17,7 +17,7 @@ from utils import log
 # TODO params and datarelease should be dfs as well
 
 
-def handle(req: ApiRequest) -> Spectra:
+def handle_spectra(req: ApiRequest) -> Spectra:
     """
     Interpret an API Request, construct and return the relevant spectra. Basic entry point of this module.
 
@@ -30,16 +30,42 @@ def handle(req: ApiRequest) -> Spectra:
     log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
-        return tile(release, params.tile, params.fibers, req.filters)
+        return get_tile_spectra(release, params.tile, params.fibers, req.filters)
     elif req.endpoint == Endpoint.TARGETS:
-        return targets(release, params.target_ids, req.filters)
+        return get_target_spectra(release, params.target_ids, req.filters)
     elif req.endpoint == Endpoint.RADEC:
-        return radec(release, params.ra, params.dec, params.radius, req.filters)
+        return get_radec_spectra(
+            release, params.ra, params.dec, params.radius, req.filters
+        )
     else:
         raise DesiApiException("Invalid Endpoint")
 
 
-def radec(
+def handle_zcat(req: ApiRequest) -> Zcat:  # TODO define type Zcat
+    """
+    Interpret an API Request, construct and return the relevant spectra. Basic entry point of this module.
+
+    :param req: A parsed/structured API Request constructing from a network request
+    :returns: Spectra object from which to construct a response
+    """
+
+    canonised = canonise_release_name(req.release)
+    release = DataRelease(canonised)
+    log("release: ", release)
+    params = req.params
+    if req.endpoint == Endpoint.TILE:
+        return get_tile_zcat(release, params.tile, params.fibers, req.filters)
+    elif req.endpoint == Endpoint.TARGETS:
+        return get_target_zcat(release, params.target_ids, req.filters)
+    elif req.endpoint == Endpoint.RADEC:
+        return get_radec_zcat(
+            release, params.ra, params.dec, params.radius, req.filters
+        )
+    else:
+        raise DesiApiException("Invalid Endpoint")
+
+
+def get_radec_spectra(
     release: DataRelease, ra: float, dec: float, radius: float, filters: Dict
 ) -> Spectra:
     """
@@ -51,19 +77,13 @@ def radec(
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
     :returns: A combined Spectra of all such objects in the data release
     """
-    targets = retrieve_targets_filtered(release, filters=filters)
-
-    distfilter = (ra - targets["TARGET_RA"]) ** 2 + (
-        dec - targets["TARGET_DEC"]
-    ) ** 2 <= radius
-    # TODO test this.
-    relevant_targets = targets[distfilter]
-    log(f'Retrieving {len(relevant_targets)} targets')
-    spectra = retrieve_target_spectra(release, relevant_targets)
+    relevant_targets = get_radec_zcat(release, ra, dec, radius, filters)
+    log(f"Retrieving {len(relevant_targets)} targets")
+    spectra = get_populated_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
 
 
-def tile(
+def get_tile_spectra(
     release: DataRelease, tile: int, fibers: List[int], filters: Filter
 ) -> Spectra:
     """
@@ -102,7 +122,9 @@ def tile(
         return spectra
 
 
-def targets(release: DataRelease, target_ids: List[int], filters: Filter) -> Spectra:
+def get_target_spectra(
+    release: DataRelease, target_ids: List[int], filters: Filter
+) -> Spectra:
     """
     Combine spectra of all target objects with the specified TARGET_IDs and return the result
 
@@ -111,11 +133,52 @@ def targets(release: DataRelease, target_ids: List[int], filters: Filter) -> Spe
     :returns: A Spectra object combining individual spectra for all targets
     """
 
-    target_objects = retrieve_targets_filtered(release, target_ids, filters)
-    return desispec.spectra.stack(retrieve_target_spectra(release, target_objects))
+    target_objects = get_target_zcat(release, target_ids, filters)
+    return desispec.spectra.stack(get_populated_target_spectra(release, target_objects))
 
 
-def retrieve_targets_filtered(
+def get_radec_zcat(
+    release: DataRelease, ra: float, dec: float, radius: float, filters: Dict
+) -> Zcat:
+    targets = get_target_zcat(release, filters=filters)
+
+    distfilter = (ra - targets["TARGET_RA"]) ** 2 + (
+        dec - targets["TARGET_DEC"]
+    ) ** 2 <= radius
+    # TODO test this.
+    return targets[distfilter]
+
+
+def get_tile_zcat(release: DataRelease, tile: int, fibers: List[int], filters: Filter):
+    desired_columns = [
+        "TARGETID",
+        "TILEID",
+        "FIBER" "SURVEY",
+        "PROGRAM",
+        "ZCAT_PRIMARY",
+        "TARGET_RA",
+        "TARGET_DEC",
+    ]  # TODO
+    for k in filters.keys():
+        desired_columns.append(k)
+
+    zcatfile = release.tile_fits
+    log("reading target zcat info from: ", zcatfile)
+    try:
+        zcat = fitsio.read(
+            zcatfile,
+            "ZCATALOG",
+            columns=desired_columns,
+        )
+    except:
+        raise DesiApiException("unable to read tile information")
+
+    keep = (zcat["TILEID"] == tile and np.isin(zcat["FIBER"]), fibers)
+    zcat = zcat[keep]
+    return filter_zcat(zcat, filters)
+
+
+def get_target_zcat(
     release: DataRelease, target_ids: List[int] = [], filters: Filter = dict()
 ) -> List[Target]:
     """
@@ -150,14 +213,11 @@ def retrieve_targets_filtered(
     except:
         raise DesiApiException("unable to read target information")
 
-    # TODO: Make keep more stringent based on filters.
-
     keep = (
         ((zcat["ZCAT_PRIMARY"] == True) & np.isin(zcat["TARGETID"], target_ids))
         if len(target_ids)
         else (zcat["ZCAT_PRIMARY"] == True)
     )
-
 
     zcat = zcat[keep]
 
@@ -170,21 +230,11 @@ def retrieve_targets_filtered(
     if len(missing_ids):
         raise DesiApiException("unable to find targets:", target_ids)
 
-    filtered_keep = np.ones(zcat.shape)
-    for k, v in filters.items():
-        clause = clause_from_filter(k,v,zcat)
-        keep = np.logical_and(filtered_keep, clause)
-    return zcat[keep]
+    return filter_zcat(zcat, filters)
 
 
-def clause_from_filter(key: str, value: str, targets: DataFrame):
-    operator_fns = {">": operator.gt, "=": operator.eq, "<": operator.lt}
-    op = value[0]
-    func = operator_fns[op]
-    value = value[1:] # Actual value. TODO: Handle casting when appropriate
-    return func(targets[key],value)
-
-def retrieve_target_spectra(
+# TODO needs a better name
+def get_populated_target_spectra(
     release: DataRelease, targets: List[Target]
 ) -> List[Spectra]:
     """
@@ -231,5 +281,31 @@ def retrieve_target_spectra(
     return target_spectra
 
 
+def clause_from_filter(key: str, value: str, targets: DataFrame):
+    operator_fns = {
+        ">": operator.gt,
+        "=": operator.eq,
+        "<": operator.lt,
+        "?": lambda x, y: True,
+    }
+    op = value[0]
+    func = operator_fns[op]
+    if op == "?":
+        value = ""
+    else:
+        value = value[1:]  # Actual value. TODO: Handle casting when appropriate
+
+    return func(targets[key], value)
+
+
 def filter_spectra(spectra: Spectra, options: Dict) -> Spectra:
+    # TODO
     return spectra
+
+
+def filter_zcat(zcat: Zcat, filters: Filter):
+    filtered_keep = np.ones(zcat.shape)
+    for k, v in filters.items():
+        clause = clause_from_filter(k, v, zcat)
+        filtered_keep = np.logical_and(filtered_keep, clause)
+    return zcat[filtered_keep]

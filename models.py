@@ -26,6 +26,7 @@ CUTOFF = dt.timedelta(
 DataFrame = Mapping[str, Any]  # Type alias
 Target = DataFrame
 Filter = Mapping[str, str]
+Zcat = DataFrame
 
 
 def canonise_release_name(release: str) -> str:
@@ -50,6 +51,11 @@ class DesiApiException(Exception):
     pass
 
 
+class RequestedData(Enum):
+    UNSPECIFIED=0
+    ZCAT=1
+    SPECTRA=2
+
 class Command(Enum):
     UNSPECIFIED = 0
     DOWNLOAD = 1
@@ -61,6 +67,7 @@ class Endpoint(Enum):
     TILE = 1
     TARGETS = 2
     RADEC = 3
+
 
 
 class Parameters:
@@ -101,7 +108,8 @@ class TargetParameters(Parameters):
 
 @dataclass()
 class ApiRequest:
-    command: Command  # should be enum really
+    requested_data: RequestedData # zcat/spectra
+    command: Command
     release: str
     endpoint: Endpoint  # tile/target/radec
     params: Parameters

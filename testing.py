@@ -63,6 +63,7 @@ def test_target_filters():
     ]
     params = TargetParameters(target_ids=targets)
     req = ApiRequest(
+        requested_data=RequestedData.SPECTRA,
         command=Command.DOWNLOAD,
         endpoint=Endpoint.TARGETS,
         release="fuji",
