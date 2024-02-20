@@ -1,1 +1,7 @@
 __pycache__
+*.html
+*.fits
+*.txt
+*.pdf
+devdocs.org
+userdoc.org
