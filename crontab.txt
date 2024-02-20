@@ -1,2 +1,0 @@
-# A sample crontab line to clean the cache every 6 hours.
-0 */6 * * * rm -rf "$HOME/tmp/desi-api-cache/*" >/dev/null 2>&1
