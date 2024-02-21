@@ -6,6 +6,21 @@ from webapp import test_file_gen
 
 import requests
 
+def test_tile_zcat():
+    fibers = [10, 234, 2761, 3951]
+    params = TileParameters(tile=80605, fibers=fibers)
+    req = ApiRequest(
+        requested_data=RequestedData.ZCAT,
+        command=Command.DOWNLOAD,
+        endpoint=Endpoint.TILE,
+        release="fuji",
+        params=params,
+        filters=dict(),
+    )
+    result = handle_zcat(req)
+    print(result)
+
+
 
 def test_tile():
     fibers = [10, 234, 2761, 3951]
@@ -17,7 +32,7 @@ def test_tile():
         params=params,
         filters=dict(),
     )
-    result = handle(req)
+    result = handle_spectra(req)
     print(result)
     print(result.fibermap["FIBER", "TARGETID"])
     assert sorted(result.fibermap["FIBER"]) == sorted(fibers)
@@ -45,6 +60,28 @@ def test_target():
     assert sorted(result.fibermap["TARGETID"]) == sorted(targets)
     return result
 
+
+def test_target_zcat():
+    targets = [
+        39628473198710603,
+        39632946386177593,
+        39632956452508085,
+        39632971434560784,
+    ]
+    params = TargetParameters(target_ids=targets)
+    req = ApiRequest(
+        requested_data=RequestedData.ZCAT,
+        command=Command.DOWNLOAD,
+        endpoint=Endpoint.TARGETS,
+        release="fuji",
+        params=params,
+        filters=dict(),
+    )
+    result = handle_zcat(req)
+    print(result)
+    # print(result.fibermap["TARGETID"])
+    # assert sorted(result.fibermap["TARGETID"]) == sorted(targets)
+    return result
 
 def test_target_filters():
     target_data = [
@@ -121,4 +158,5 @@ def test_post_targets():
     # requests.get("http://127.0.0.1:5000/api/v1/plot/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?survey=main", )
 
 
-test_target_filters()
+test_tile_zcat()
+test_target_zcat()

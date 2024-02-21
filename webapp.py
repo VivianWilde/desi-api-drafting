@@ -43,7 +43,7 @@ def show_doc():
     "/api/v1/<requested_data>/<command>/<release>/<endpoint>/<path:endpoint_params>",
     methods=["GET"],
 )
-def handle_get_spectra(
+def handle_get(
     requested_data: str, command: str, release: str, endpoint: str, endpoint_params: str
 ):
     """Entrypoint. Accepts an arbitrary path (via a URL), translates it into an API request, builds the response as a file, and serves it over the network
@@ -153,43 +153,10 @@ def build_request(
     )
 
 
-def build_params_from_dict(endpoint: Endpoint, params: Dict) -> Parameters:
-    # TODO: Replace keys with consts, Kapstan style.
-    try:
-        if endpoint == Endpoint.RADEC:
-            ra, dec, radius = [float(params[key]) for key in ["ra", "dec", "radius"]]
-            return RadecParameters(ra, dec, radius)
-        elif endpoint == Endpoint.TARGETS:
-            return TargetParameters(parse_list_int(params["target_ids"]))
-        elif endpoint == Endpoint.TILE:
-            return TileParameters(
-                int(params["tile_id"]), parse_list_int(params["fiber_ids"])
-            )
-    except:
-        raise DesiApiException(f"invalid endpoint parameters for {endpoint}")
-
-
-def build_params_from_strings(endpoint: Endpoint, params: List[str]) -> Parameters:
-    """Build a Parameters object out of the API parameters (a list of arguments)
-
-    :param endpoint: The type of the API request as an enum: One of Tile/Target/Radec
-    :param params: A list of strings representing parameters in the API request, such as ['80605', '10,234,2761,3951']
-    :returns: A Parameters object representing the parameters specified in the request.
-    """
-    try:
-        if endpoint == Endpoint.RADEC:
-            ra, dec, radius = parse_list_float(params[0])
-            return RadecParameters(ra, dec, radius)
-        elif endpoint == Endpoint.TARGETS:
-            return TargetParameters(parse_list_int(params[0]))
-        elif endpoint == Endpoint.TILE:
-            return TileParameters(int(params[0]), parse_list_int(params[1]))
-    except:
-        raise DesiApiException(f"invalid endpoint parameters for {endpoint}")
-
-
 def validate(req: ApiRequest):
     params = req.params
+    if req.requested_data== RequestedData.ZCAT:
+        return True # no restrictions on zcat endpoint (for now)
     if req.endpoint == Endpoint.RADEC:
         validate_radec(params)
     elif req.endpoint == Endpoint.TARGETS:
@@ -198,29 +165,6 @@ def validate(req: ApiRequest):
         validate_tile(params)
     else:
         raise DesiApiException("invalid endpoint")
-
-
-def validate_radec(params: RadecParameters):
-    if params.radius > 60:
-        raise DesiApiException("radius must be <= 60 arcseconds")
-
-
-def validate_tile(params: TileParameters):
-    if len(params.fibers) > 500:
-        raise DesiApiException("cannot have more than 500 fiber IDs")
-
-
-def validate_target(params: TargetParameters):
-    if len(params.target_ids) > 500:
-        raise DesiApiException("cannot have more than 500 target IDs")
-
-
-def invalid_request_error(e: Exception):
-    """Take an error resulting from an invalid request, and wrap it in a Flask response"""
-    info = dumps(
-        {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}
-    )
-    abort(Response(info), 400)
 
 
 def process_request(req: ApiRequest):
@@ -258,28 +202,6 @@ def exec_request(req: ApiRequest):
         )
 
 
-def check_cache(req: ApiRequest, request_time: dt.datetime):
-    cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
-    if os.path.isdir(cache_path):
-        cached_responses = os.listdir(cache_path)
-        most_recent = (
-            max(cached_responses, key=basename)
-            if len(cached_responses)
-            else dt.datetime.utcfromtimestamp(0).isoformat()
-        )
-        # Filenames are of the form <timestamp>.<ext>, the key filters out extension
-        # If there are no cached responses, use 1970 as the time so it doesn't get selected.
-        print("recent", basename(most_recent))
-        age = request_time - dt.datetime.fromisoformat(basename(most_recent))
-        print("age", age)
-        if age < CUTOFF:
-            log("using cache")
-            return os.path.join(cache_path, most_recent)
-        else:
-            log("rebuilding")
-            return None
-
-
 def build_response(req: ApiRequest, request_time: dt.datetime) -> str:
     """Build the file asked for by REQ, or reuse an existing one if it is sufficiently recent, and return the path to it
 
@@ -307,8 +229,6 @@ def build_response(req: ApiRequest, request_time: dt.datetime) -> str:
         )
         return resp_file_path
 
-        # create the file: figure out req.file_format
-
 
 def create_zcat_file(
     cmd: Command, zcat: Zcat, save_dir: str, file_name: str, filters: Filter
@@ -327,11 +247,6 @@ def create_zcat_file(
             return target_file
         except Exception as e:
             raise DesiApiException("unable to create spectra file - fitsio failed")
-
-
-def zcat_to_html(save_dir: str, file_name: str):
-    # TODO
-    return ""
 
 
 def create_spectra_file(
@@ -358,6 +273,11 @@ def create_spectra_file(
         raise DesiApiException("invalid command (must be PLOT or DOWNLOAD)")
 
 
+def zcat_to_html(save_dir: str, file_name: str):
+    # TODO
+    return ""
+
+
 def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
     try:
         plotspectra(
@@ -372,6 +292,90 @@ def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
         return f"{save_dir}/{file_name}.html"
     except Exception as e:
         raise DesiApiException("unable to produce plot")
+
+
+# Validation Functions/Rules:
+
+def validate_radec(params: RadecParameters):
+    if params.radius > 60:
+        raise DesiApiException("radius must be <= 60 arcseconds")
+
+
+def validate_tile(params: TileParameters):
+    if len(params.fibers) > 500:
+        raise DesiApiException("cannot have more than 500 fiber IDs")
+
+
+def validate_target(params: TargetParameters):
+    if len(params.target_ids) > 500:
+        raise DesiApiException("cannot have more than 500 target IDs")
+
+
+# Helper Functions:
+
+def build_params_from_dict(endpoint: Endpoint, params: Dict) -> Parameters:
+    # TODO: Replace keys with consts, Kapstan style.
+    try:
+        if endpoint == Endpoint.RADEC:
+            ra, dec, radius = [float(params[key]) for key in ["ra", "dec", "radius"]]
+            return RadecParameters(ra, dec, radius)
+        elif endpoint == Endpoint.TARGETS:
+            return TargetParameters(parse_list_int(params["target_ids"]))
+        elif endpoint == Endpoint.TILE:
+            return TileParameters(
+                int(params["tile_id"]), parse_list_int(params["fiber_ids"])
+            )
+    except:
+        raise DesiApiException(f"invalid endpoint parameters for {endpoint}")
+
+
+def build_params_from_strings(endpoint: Endpoint, params: List[str]) -> Parameters:
+    """Build a Parameters object out of the API parameters (a list of arguments)
+
+    :param endpoint: The type of the API request as an enum: One of Tile/Target/Radec
+    :param params: A list of strings representing parameters in the API request, such as ['80605', '10,234,2761,3951']
+    :returns: A Parameters object representing the parameters specified in the request.
+    """
+    try:
+        if endpoint == Endpoint.RADEC:
+            ra, dec, radius = parse_list_float(params[0])
+            return RadecParameters(ra, dec, radius)
+        elif endpoint == Endpoint.TARGETS:
+            return TargetParameters(parse_list_int(params[0]))
+        elif endpoint == Endpoint.TILE:
+            return TileParameters(int(params[0]), parse_list_int(params[1]))
+    except:
+        raise DesiApiException(f"invalid endpoint parameters for {endpoint}")
+
+
+def invalid_request_error(e: Exception):
+    """Take an error resulting from an invalid request, and wrap it in a Flask response"""
+    info = dumps(
+        {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}
+    )
+    abort(Response(info), 400)
+
+
+def check_cache(req: ApiRequest, request_time: dt.datetime):
+    cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
+    if os.path.isdir(cache_path):
+        cached_responses = os.listdir(cache_path)
+        most_recent = (
+            max(cached_responses, key=basename)
+            if len(cached_responses)
+            else dt.datetime.utcfromtimestamp(0).isoformat()
+        )
+        # Filenames are of the form <timestamp>.<ext>, the key filters out extension
+        # If there are no cached responses, use 1970 as the time so it doesn't get selected.
+        print("recent", basename(most_recent))
+        age = request_time - dt.datetime.fromisoformat(basename(most_recent))
+        print("age", age)
+        if age < CUTOFF:
+            log("using cache")
+            return os.path.join(cache_path, most_recent)
+        else:
+            log("rebuilding")
+            return None
 
 
 # For testing the pipeline from request -> build file, for testing on NERSC pre web-app

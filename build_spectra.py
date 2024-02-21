@@ -153,7 +153,8 @@ def get_tile_zcat(release: DataRelease, tile: int, fibers: List[int], filters: F
     desired_columns = [
         "TARGETID",
         "TILEID",
-        "FIBER" "SURVEY",
+        "FIBER",
+        "SURVEY",
         "PROGRAM",
         "ZCAT_PRIMARY",
         "TARGET_RA",
