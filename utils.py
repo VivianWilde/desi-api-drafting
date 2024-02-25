@@ -1,8 +1,8 @@
 #!/usr/bin/env ipython3
 
-from desispec.util import get_logger
 import os
-from typing import List, Callable, Any
+from typing import Any, Callable, List
+
 
 def mimetype(path: str) -> str:
     """Returns the extension of the file"""
@@ -33,3 +33,10 @@ def log(*args):
     # logger.info(*args)
 
     print("LOG INFO:", *args)
+
+
+def clean_cache():
+    # Look inside every dir
+    # For each dir:
+    # Delete everything older, if it's empty delete the top-level dir as well.
+    pass

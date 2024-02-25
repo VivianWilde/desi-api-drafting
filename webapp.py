@@ -1,28 +1,20 @@
 #!/usr/bin/env ipython3
 
-from flask import (
-    Flask,
-    Response,
-    redirect,
-    send_file,
-    request,
-    abort,
-)
-
 import datetime as dt
 import os
-from typing import List
 from json import dumps
+from typing import List
 
-import desispec.io, desispec.spectra
+import desispec.io
+import desispec.spectra
 import fitsio
 from desispec.spectra import Spectra
+from flask import Flask, Response, abort, redirect, request, send_file
 from prospect.viewer import plotspectra
 
 import build_spectra
 from models import *
 from utils import *
-
 
 DEBUG = True
 app = Flask(__name__)
@@ -105,8 +97,8 @@ def build_request(
     command: str,
     release: str,
     endpoint: str,
-    params: str | Dict,
-    filters: Dict,
+    params: str | dict,
+    filters: dict,
 ) -> ApiRequest:
     """Parse an API request path into an ApiRequest object. The parameters represent the components of the request URL.
 
@@ -212,7 +204,7 @@ def build_response(req: ApiRequest, request_time: dt.datetime) -> str:
     cached = check_cache(req, request_time)
     if cached:
         return cached
-    cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
+    cache_path = f"{CACHE}/{req.get_cache_path()}"
 
     if req.requested_data == RequestedData.SPECTRA:
         spectra = build_spectra.handle_spectra(req)
@@ -221,17 +213,17 @@ def build_response(req: ApiRequest, request_time: dt.datetime) -> str:
         )
         return resp_file_path
     else:
-        zcat = build_spectra.handle_zcat(
+        zcatalog = build_spectra.handle_zcatalog(
             req
         )  # object returned by fitsio.read + slicing/dicing
         resp_file_path = create_zcat_file(
-            req.command, zcat, cache_path, request_time.isoformat(), req.filters
+            req.command, zcatalog, cache_path, request_time.isoformat(), req.filters
         )
         return resp_file_path
 
 
 def create_zcat_file(
-    cmd: Command, zcat: Zcat, save_dir: str, file_name: str, filters: Filter
+    cmd: Command, zcat: Zcatalog, save_dir: str, file_name: str, filters: Filter
 ) -> str:
     os.makedirs(save_dir, exist_ok=True)
     # TODO figure filetype based on filters
@@ -313,7 +305,7 @@ def validate_target(params: TargetParameters):
 
 # Helper Functions:
 
-def build_params_from_dict(endpoint: Endpoint, params: Dict) -> Parameters:
+def build_params_from_dict(endpoint: Endpoint, params: dict) -> Parameters:
     # TODO: Replace keys with consts, Kapstan style.
     try:
         if endpoint == Endpoint.RADEC:
@@ -357,7 +349,7 @@ def invalid_request_error(e: Exception):
 
 
 def check_cache(req: ApiRequest, request_time: dt.datetime):
-    cache_path = f"{CACHE_DIR}/{req.get_cache_path()}"
+    cache_path = f"{CACHE}/{req.get_cache_path()}"
     if os.path.isdir(cache_path):
         cached_responses = os.listdir(cache_path)
         most_recent = (

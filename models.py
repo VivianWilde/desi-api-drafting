@@ -1,32 +1,36 @@
 #!/usr/bin/env ipython3
-from enum import Enum
-from pathlib import Path
-from dataclasses import dataclass
 import datetime as dt
-from typing import Any, Dict, List, Optional, Tuple, Mapping
 import os
+import tomllib
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Mapping, Tuple
 
-from werkzeug.datastructures import ImmutableMultiDict
+from numpy import ndarray
 
 # Models and constants
 
 # Unused for now
 # TODO: Fix for docker edition
-SQL_DIR = f"{os.getenv('home')}/desi-sql"
-SPECTRO_REDUX = os.getenv("DESI_SPECTRO_REDUX")
-CACHE_DIR = os.path.expanduser("~/tmp/desi-api-cache")
+# CONFIG_FILE = f"{os.getenv('HOME')}/.config/desi-api.toml"
+CONFIG_FILE="/home/vivien/d/urap/desi-api/docker-utilities/default.toml"
+with open(CONFIG_FILE, "rb") as conf:
+    CONFIG = tomllib.load(conf)
 
 
-CUTOFF = dt.timedelta(
-    hours=1
-)  # if age > cutoff, a response is considered stale and we recompute
+def get_dir(key: str):
+    return os.path.expanduser(CONFIG["paths"][key])
 
+CACHE = get_dir("cache")
+SPECTRO_REDUX = get_dir("spectro_redux") or os.getenv("DESI_SPECTRO_REDUX")
+SQL_DIR = get_dir("sql")
+CUTOFF = dt.timedelta(minutes=CONFIG["cutoff"])
 
 # Type aliases my beloved
-DataFrame = Mapping[str, Any]  # Type alias
-Target = DataFrame
+Dataframe = ndarray
+Target = Dataframe
 Filter = Mapping[str, str]
-Zcat = DataFrame
+Zcatalog = Dataframe
 
 
 def canonise_release_name(release: str) -> str:
@@ -52,9 +56,10 @@ class DesiApiException(Exception):
 
 
 class RequestedData(Enum):
-    UNSPECIFIED=0
-    ZCAT=1
-    SPECTRA=2
+    UNSPECIFIED = 0
+    ZCAT = 1
+    SPECTRA = 2
+
 
 class Command(Enum):
     UNSPECIFIED = 0
@@ -67,7 +72,6 @@ class Endpoint(Enum):
     TILE = 1
     TARGETS = 2
     RADEC = 3
-
 
 
 class Parameters:
@@ -108,7 +112,7 @@ class TargetParameters(Parameters):
 
 @dataclass()
 class ApiRequest:
-    requested_data: RequestedData # zcat/spectra
+    requested_data: RequestedData  # zcat/spectra
     command: Command
     release: str
     endpoint: Endpoint  # tile/target/radec

@@ -3,5 +3,6 @@ __pycache__
 *.fits
 *.txt
 *.pdf
+.projectile
 devdocs.org
 userdoc.org

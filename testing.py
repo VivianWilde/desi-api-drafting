@@ -17,7 +17,7 @@ def test_tile_zcat():
         params=params,
         filters=dict(),
     )
-    result = handle_zcat(req)
+    result = handle_zcatalog(req)
     print(result)
 
 
@@ -75,9 +75,9 @@ def test_target_zcat():
         endpoint=Endpoint.TARGETS,
         release="fuji",
         params=params,
-        filters=dict(),
+        filters={"PROGRAM":"=dark"},
     )
-    result = handle_zcat(req)
+    result = handle_zcatalog(req)
     print(result)
     # print(result.fibermap["TARGETID"])
     # assert sorted(result.fibermap["TARGETID"]) == sorted(targets)
@@ -159,4 +159,4 @@ def test_post_targets():
 
 
 test_tile_zcat()
-test_target_zcat()
+# test_target_zcat()

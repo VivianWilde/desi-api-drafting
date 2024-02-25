@@ -1,0 +1,15 @@
+# Default config values for the DESI API
+
+# How old must a cached response be before we discard it, in minutes
+cutoff = 60
+
+# Do we want to clean cache frequently, or whenever it hits a certain size. Open question
+cache_clean_frequency = 60
+
+
+
+[paths]
+# Absolute, but ~ is allowed
+sql = "~/desi-sql"
+spectro_redux=""
+cache = "~/tmp/desi-api-cache"

@@ -1,14 +1,16 @@
 #!/usr/bin/env ipython3
-import os
-import desispec.io, desispec.spectra
-from math import sqrt, radians, cos
-from typing import List, Tuple
-from models import *
-from desispec.spectra import Spectra
-import fitsio
 import operator
-from astropy.table import Table
+import os
+from typing import List, Tuple
+
+import desispec.io
+import desispec.spectra
+import fitsio
 import numpy as np
+from astropy.table import Table
+from desispec.spectra import Spectra
+
+from models import *
 from utils import log
 
 # TODO: Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
@@ -41,12 +43,12 @@ def handle_spectra(req: ApiRequest) -> Spectra:
         raise DesiApiException("Invalid Endpoint")
 
 
-def handle_zcat(req: ApiRequest) -> Zcat:  # TODO define type Zcat
+def handle_zcatalog(req: ApiRequest) -> Zcatalog:
     """
-    Interpret an API Request, construct and return the relevant spectra. Basic entry point of this module.
+    Interpret an API Request, construct and return the relevant Zcatalog (metadata). Basic entry point of this module.
 
     :param req: A parsed/structured API Request constructing from a network request
-    :returns: Spectra object from which to construct a response
+    :returns: Zcatalog object from which to construct a response
     """
 
     canonised = canonise_release_name(req.release)
@@ -54,11 +56,11 @@ def handle_zcat(req: ApiRequest) -> Zcat:  # TODO define type Zcat
     log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
-        return get_tile_zcat(release, params.tile, params.fibers, req.filters)
+        return get_tile_zcatalog(release, params.tile, params.fibers, req.filters)
     elif req.endpoint == Endpoint.TARGETS:
-        return get_target_zcat(release, params.target_ids, req.filters)
+        return get_target_zcatalog(release, params.target_ids, req.filters)
     elif req.endpoint == Endpoint.RADEC:
-        return get_radec_zcat(
+        return get_radec_zcatalog(
             release, params.ra, params.dec, params.radius, req.filters
         )
     else:
@@ -66,7 +68,7 @@ def handle_zcat(req: ApiRequest) -> Zcat:  # TODO define type Zcat
 
 
 def get_radec_spectra(
-    release: DataRelease, ra: float, dec: float, radius: float, filters: Dict
+    release: DataRelease, ra: float, dec: float, radius: float, filters: Filter
 ) -> Spectra:
     """
     Find all objects within RADIUS of the point (RA, DEC), combine and return their spectra
@@ -77,7 +79,7 @@ def get_radec_spectra(
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
     :returns: A combined Spectra of all such objects in the data release
     """
-    relevant_targets = get_radec_zcat(release, ra, dec, radius, filters)
+    relevant_targets = get_radec_zcatalog(release, ra, dec, radius, filters)
     log(f"Retrieving {len(relevant_targets)} targets")
     spectra = get_populated_target_spectra(release, relevant_targets)
     return desispec.spectra.stack(spectra)
@@ -133,14 +135,24 @@ def get_target_spectra(
     :returns: A Spectra object combining individual spectra for all targets
     """
 
-    target_objects = get_target_zcat(release, target_ids, filters)
+    target_objects = get_target_zcatalog(release, target_ids, filters)
     return desispec.spectra.stack(get_populated_target_spectra(release, target_objects))
 
 
-def get_radec_zcat(
-    release: DataRelease, ra: float, dec: float, radius: float, filters: Dict
-) -> Zcat:
-    targets = get_target_zcat(release, filters=filters)
+def get_radec_zcatalog(
+    release: DataRelease, ra: float, dec: float, radius: float, filters: Filter
+) -> Zcatalog:
+    """
+
+    :param release:
+    :param ra:
+    :param dec:
+    :param radius:
+    :param filters:
+    :returns:
+
+    """
+    targets = get_target_zcatalog(release, filters=filters)
 
     distfilter = (ra - targets["TARGET_RA"]) ** 2 + (
         dec - targets["TARGET_DEC"]
@@ -149,7 +161,9 @@ def get_radec_zcat(
     return targets[distfilter]
 
 
-def get_tile_zcat(release: DataRelease, tile: int, fibers: List[int], filters: Filter):
+def get_tile_zcatalog(
+    release: DataRelease, tile: int, fibers: List[int], filters: Filter
+):
     desired_columns = [
         "TARGETID",
         "TILEID",
@@ -164,9 +178,9 @@ def get_tile_zcat(release: DataRelease, tile: int, fibers: List[int], filters: F
         desired_columns.append(k)
 
     zcatfile = release.tile_fits
-    log("reading target zcat info from: ", zcatfile)
+    log("reading target zcatalog info from: ", zcatfile)
     try:
-        zcat = fitsio.read(
+        zcatalog = fitsio.read(
             zcatfile,
             "ZCATALOG",
             columns=desired_columns,
@@ -174,12 +188,12 @@ def get_tile_zcat(release: DataRelease, tile: int, fibers: List[int], filters: F
     except:
         raise DesiApiException("unable to read tile information")
 
-    keep = (zcat["TILEID"] == tile and np.isin(zcat["FIBER"]), fibers)
-    zcat = zcat[keep]
-    return filter_zcat(zcat, filters)
+    keep = (zcatalog["TILEID"] == tile & np.isin(zcatalog["FIBER"], fibers))
+    zcatalog = zcatalog[keep]
+    return filter_zcatalog(zcatalog, filters)
 
 
-def get_target_zcat(
+def get_target_zcatalog(
     release: DataRelease, target_ids: List[int] = [], filters: Filter = dict()
 ) -> List[Target]:
     """
@@ -204,9 +218,9 @@ def get_target_zcat(
         desired_columns.append(k)
 
     zcatfile = release.healpix_fits
-    log("reading target zcat info from: ", zcatfile)
+    log("reading target zcatalog info from: ", zcatfile)
     try:
-        zcat = fitsio.read(
+        zcatalog = fitsio.read(
             zcatfile,
             "ZCATALOG",
             columns=desired_columns,
@@ -215,23 +229,23 @@ def get_target_zcat(
         raise DesiApiException("unable to read target information")
 
     keep = (
-        ((zcat["ZCAT_PRIMARY"] == True) & np.isin(zcat["TARGETID"], target_ids))
+        ((zcatalog["ZCAT_PRIMARY"] == True) & np.isin(zcatalog["TARGETID"], target_ids))
         if len(target_ids)
-        else (zcat["ZCAT_PRIMARY"] == True)
+        else (zcatalog["ZCAT_PRIMARY"] == True)
     )
 
-    zcat = zcat[keep]
+    zcatalog = zcatalog[keep]
 
     # Check for missing IDs
     missing_ids = []
-    found_ids = set(zcat["TARGETID"])
+    found_ids = set(zcatalog["TARGETID"])
     for i in target_ids:
         if i not in found_ids:
             missing_ids.append(i)
     if len(missing_ids):
         raise DesiApiException("unable to find targets:", target_ids)
 
-    return filter_zcat(zcat, filters)
+    return filter_zcatalog(zcatalog, filters)
 
 
 # TODO needs a better name
@@ -270,10 +284,10 @@ def get_populated_target_spectra(
             spectra = desispec.io.read_spectra(
                 source_file, targetids=[target["TARGETID"]]
             )
-            zcat = Table.read(redrock_file, "REDSHIFTS")
-            keep = zcat["TARGETID"] == target["TARGETID"]
-            zcat = zcat[keep]
-            spectra.extra_catalog = zcat
+            zcatalog = Table.read(redrock_file, "REDSHIFTS")
+            keep = zcatalog["TARGETID"] == target["TARGETID"]
+            zcatalog = zcatalog[keep]
+            spectra.extra_catalog = zcatalog
             target_spectra.append(spectra)
         except:
             failures.append(target["TARGETID"])
@@ -282,7 +296,7 @@ def get_populated_target_spectra(
     return target_spectra
 
 
-def clause_from_filter(key: str, value: str, targets: DataFrame):
+def clause_from_filter(key: str, value: str, targets: Dataframe):
     operator_fns = {
         ">": operator.gt,
         "=": operator.eq,
@@ -299,14 +313,14 @@ def clause_from_filter(key: str, value: str, targets: DataFrame):
     return func(targets[key], value)
 
 
-def filter_spectra(spectra: Spectra, options: Dict) -> Spectra:
+def filter_spectra(spectra: Spectra, options: Filter) -> Spectra:
     # TODO
     return spectra
 
 
-def filter_zcat(zcat: Zcat, filters: Filter):
-    filtered_keep = np.ones(zcat.shape)
+def filter_zcatalog(zcatalog: Zcatalog, filters: Filter):
+    filtered_keep = np.full(zcatalog.shape, True, dtype=bool)
     for k, v in filters.items():
-        clause = clause_from_filter(k, v, zcat)
+        clause = clause_from_filter(k, v, zcatalog)
         filtered_keep = np.logical_and(filtered_keep, clause)
-    return zcat[filtered_keep]
+    return zcatalog[filtered_keep]
