@@ -188,7 +188,7 @@ def get_tile_zcatalog(
     except:
         raise DesiApiException("unable to read tile information")
 
-    keep = (zcatalog["TILEID"] == tile & np.isin(zcatalog["FIBER"], fibers))
+    keep = zcatalog["TILEID"] == tile & np.isin(zcatalog["FIBER"], fibers)
     zcatalog = zcatalog[keep]
     return filter_zcatalog(zcatalog, filters)
 
@@ -244,7 +244,6 @@ def get_target_zcatalog(
             missing_ids.append(i)
     if len(missing_ids):
         raise DesiApiException("unable to find targets:", target_ids)
-
     return filter_zcatalog(zcatalog, filters)
 
 
@@ -303,7 +302,12 @@ def clause_from_filter(key: str, value: str, targets: Dataframe):
         "<": operator.lt,
         "?": lambda x, y: True,
     }
+    key = key.upper()
     op = value[0]
+    if op not in operator_fns.keys():
+        func = operator_fns["="]
+        return func(targets[key], value)
+
     func = operator_fns[op]
     if op == "?":
         value = ""

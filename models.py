@@ -123,7 +123,9 @@ class ApiRequest:
         """Return the path (relative to cache dir) to write this request to
         :returns:
         """
-        return f"{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}"
+        # Fitsio doesn't like parentheses in file names
+        return f"{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}".replace("(","<").replace(")",">")
+
 
     def validate(self) -> bool:
         return True

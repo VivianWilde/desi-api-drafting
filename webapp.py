@@ -238,7 +238,7 @@ def create_zcat_file(
             fitsio.write(target_file, zcat)
             return target_file
         except Exception as e:
-            raise DesiApiException("unable to create spectra file - fitsio failed")
+            raise DesiApiException("unable to create spectra file - fitsio failed to write to " + target_file)
 
 
 def create_spectra_file(

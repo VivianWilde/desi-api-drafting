@@ -6,6 +6,7 @@ from webapp import test_file_gen
 
 import requests
 
+
 def test_tile_zcat():
     fibers = [10, 234, 2761, 3951]
     params = TileParameters(tile=80605, fibers=fibers)
@@ -19,7 +20,6 @@ def test_tile_zcat():
     )
     result = handle_zcatalog(req)
     print(result)
-
 
 
 def test_tile():
@@ -75,13 +75,14 @@ def test_target_zcat():
         endpoint=Endpoint.TARGETS,
         release="fuji",
         params=params,
-        filters={"PROGRAM":"=dark"},
+        filters={"PROGRAM": "=dark"},
     )
     result = handle_zcatalog(req)
     print(result)
     # print(result.fibermap["TARGETID"])
     # assert sorted(result.fibermap["TARGETID"]) == sorted(targets)
     return result
+
 
 def test_target_filters():
     target_data = [
@@ -105,7 +106,7 @@ def test_target_filters():
         endpoint=Endpoint.TARGETS,
         release="fuji",
         params=params,
-        filters={"PROGRAM":"=dark"},
+        filters={"PROGRAM": "=dark"},
     )
     result = handle(req)
     print(result)
@@ -134,13 +135,13 @@ def test_app_target():
 
 def test_get_targets():
     return requests.get(
-        "http://127.0.0.1:5000/api/v1/download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?survey=main",
+        "http://127.0.0.1:5000/api/v1/zcat/download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?program=dark",
     )
 
 
 def test_get_tile():
     return requests.get(
-        "http://127.0.0.1:5000/api/v1/plot/fuji/tile/80605/10,234,2761,3951"
+        "http://127.0.0.1:5000/api/v1/spectra/plot/fuji/tile/80605/10,234,2761,3951"
     )
 
 
@@ -156,7 +157,3 @@ def test_post_targets():
     return resp
 
     # requests.get("http://127.0.0.1:5000/api/v1/plot/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?survey=main", )
-
-
-test_tile_zcat()
-# test_target_zcat()
