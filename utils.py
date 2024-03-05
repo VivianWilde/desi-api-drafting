@@ -19,9 +19,10 @@ def basename(path: str):
     return os.path.splitext(path)[0]
 
 
-def build_list_parser(func: Callable[[str], Any]) -> Callable[[str], List[Any]] :
+def build_list_parser(func: Callable[[str], Any]) -> Callable[[str], List[Any]]:
     """Returns a func that takes in a string representing a comma-separated list of integers or floats (no spaces) and returns the list"""
     return lambda s: [func(i) for i in s.split(",")]
+
 
 parse_list_int = build_list_parser(int)
 parse_list_float = build_list_parser(float)

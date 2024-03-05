@@ -103,12 +103,12 @@ def get_tile_spectra(
 
     try:
         spectra = desispec.io.read_tile_spectra(
-            latest,
             tile,
-            fibers=fibers,
-            coadd=True,
-            redrock=True,
+            latest,
             specprod=release.name,
+            coadd=True,
+            fibers=fibers,
+            redrock=True,
             group="cumulative",
         )
     except:
@@ -116,10 +116,10 @@ def get_tile_spectra(
         # TODO: Figure out read_tile_spectra errors and use those
     log("read spectra")
     if isinstance(spectra, Tuple):
-        # spectra, redrock = spectra
-        # keep = np.isin(redrock["FIBER_ID"], fibers) & redrock["TILE"]==tile
-        # spectra.extra_catalog = redrock[keep]
-        return spectra[0]
+        spectra_data, redrock = spectra
+        # keep = np.isin(redrock["FIBERID"], fibers) & redrock["TILE"]==tile
+        # spectra_data.extra_catalog = redrock
+        return spectra_data
     else:
         return spectra
 
@@ -185,10 +185,9 @@ def get_tile_zcatalog(
             "ZCATALOG",
             columns=desired_columns,
         )
-    except:
+    except Exception as e:
         raise DesiApiException("unable to read tile information")
-
-    keep = zcatalog["TILEID"] == tile & np.isin(zcatalog["FIBER"], fibers)
+    keep = (zcatalog["TILEID"] == tile) & np.isin(zcatalog["FIBER"], fibers)
     zcatalog = zcatalog[keep]
     return filter_zcatalog(zcatalog, filters)
 

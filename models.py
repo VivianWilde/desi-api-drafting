@@ -10,16 +10,16 @@ from numpy import ndarray
 
 # Models and constants
 
-# Unused for now
 # TODO: Fix for docker edition
 # CONFIG_FILE = f"{os.getenv('HOME')}/.config/desi-api.toml"
-CONFIG_FILE="/home/vivien/d/urap/desi-api/docker-utilities/default.toml"
+CONFIG_FILE = "/home/vivien/d/urap/desi-api/docker-utilities/default.toml"
 with open(CONFIG_FILE, "rb") as conf:
     CONFIG = tomllib.load(conf)
 
 
 def get_dir(key: str):
     return os.path.expanduser(CONFIG["paths"][key])
+
 
 CACHE = get_dir("cache")
 SPECTRO_REDUX = get_dir("spectro_redux") or os.getenv("DESI_SPECTRO_REDUX")
@@ -42,7 +42,7 @@ def canonise_release_name(release: str) -> str:
 
     """
     # TODO This is kind of gross, we should really have this live outside the code in a json or something, or pulled directly?
-    allowed = ["fuji", "iron", "daily"]
+    allowed = ["fuji", "iron", "daily", "fujilite"]
     translations = {"edr": "fuji", "dr1": "iron"}
     if release in allowed:
         return release
@@ -123,9 +123,12 @@ class ApiRequest:
         """Return the path (relative to cache dir) to write this request to
         :returns:
         """
-        # Fitsio doesn't like parentheses in file names
-        return f"{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}".replace("(","<").replace(")",">")
+        return self.replace_for_fitsio(f"{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}")
 
+    @staticmethod
+    def replace_for_fitsio(s: str):
+        """FitsIO has weird quirks regarding file names it allows, we try to work around them here"""
+        return s.replace(" ", "").replace("(", "<").replace(")", ">").replace("[", "<").replace("]", ">")
 
     def validate(self) -> bool:
         return True

@@ -1,10 +1,11 @@
 #!/usr/bin/env ptpython
+import requests
+
 from build_spectra import *
 from models import *
-
 from webapp import test_file_gen
 
-import requests
+# Build_spectra tests: Test it gets the right data in our internal python format
 
 
 def test_tile_zcat():
@@ -26,6 +27,7 @@ def test_tile():
     fibers = [10, 234, 2761, 3951]
     params = TileParameters(tile=80605, fibers=fibers)
     req = ApiRequest(
+        requested_data=RequestedData.SPECTRA,
         command=Command.DOWNLOAD,
         endpoint=Endpoint.TILE,
         release="fuji",
@@ -37,6 +39,8 @@ def test_tile():
     print(result.fibermap["FIBER", "TARGETID"])
     assert sorted(result.fibermap["FIBER"]) == sorted(fibers)
     return result
+
+# test_tile()
 
 
 def test_target():
@@ -115,34 +119,53 @@ def test_target_filters():
     return result
 
 
-# Webapp mocking
-def test_app_tile():
-    x = test_file_gen("plot/fuji/tile/80605/10,234,2761,3951")
+# App tests: Given an endpoint string, build and return response file for it
+def meta_test_app(req: str):
+    x = test_file_gen(req)
     print(x)
     return x
+
+
+def test_app_tile():
+    return meta_test_app("spectra/plot/fuji/tile/80605/10,234,2761,3951")
 
 
 def test_app_target():
-    x = test_file_gen(
-        "download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?survey=main"
+    return meta_test_app(
+        "spectra/download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?survey=main"
     )
-    print(x)
-    return x
 
 
 # Webapp testing
+vi_endpoint = {
+    "targets": "zcat/download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?program=dark",
+    "tile": "spectra/plot/fuji/tile/80605/10,234,2761,3951",
+}
+
+
+def test_get(req: str):
+    resp = requests.get("http://127.0.0.1:5000/api/v1/" + req)
+    print(req)
+    print(resp.status_code)
+    # print(resp.content)
+    assert resp.status_code == 200
+    assert resp.content != ""
+    return resp
+
+
+def test_post(req: str, args: dict):
+    resp = requests.post("http://127.0.0.1:5000/api/v1/" + req, data=args)
+    assert resp.status_code == 200
+    assert resp.content != ""
+    return resp
 
 
 def test_get_targets():
-    return requests.get(
-        "http://127.0.0.1:5000/api/v1/zcat/download/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?program=dark",
-    )
+    return test_get(vi_endpoint["targets"])
 
 
 def test_get_tile():
-    return requests.get(
-        "http://127.0.0.1:5000/api/v1/spectra/plot/fuji/tile/80605/10,234,2761,3951"
-    )
+    return test_get(vi_endpoint["tile"])
 
 
 def test_post_targets():
@@ -153,7 +176,42 @@ def test_post_targets():
         "params": "39628473198710603,39632946386177593,39632956452508085,39632971434560784",
         "survey": "main",
     }
-    resp = requests.post("http://127.0.0.1:5000/api/v1/post", data=data)
-    return resp
+    return test_post("http://127.0.0.1:5000/api/v1/post", data)
 
-    # requests.get("http://127.0.0.1:5000/api/v1/plot/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784?survey=main", )
+
+# Fujilite
+
+fujilite_endpoints = [
+    # "spectra/plot/fujilite/radec/210.9,24.8,180", # FIXME
+    # "spectra/download/fujilite/radec/210.9,24.8,180",
+    "spectra/plot/fujilite/tile/80858/600,900,1000",
+    # "spectra/plot/fujilite/targets/39628368387245557,39628368404022902", #Works
+    # "spectra/download/fujilite/radec/210.9,24.8,180", # Works
+    # "zcat/download/fujilite/radec/210.9,24.8,180", # Works
+    "zcat/download/fujilite/tile/80858/600,900,1000",
+    # "zcat/download/fujilite/targets/39628368387245557,39628368404022902", # Works
+]
+
+zcat_plot_endpoints = [
+    "zcat/plot/fujilite/radec/210.9,24.8,180",
+    "zcat/plot/fujilite/tile/80858/600,900,1000",
+    "zcat/plot/fujilite/targets/39628368387245557,39628368404022902",
+]
+
+
+def test_fujilite():
+    resps = dict()
+    for endpoint in fujilite_endpoints:
+        resps[endpoint] = test_get(endpoint)
+    return resps
+    # resps = [test_get(endpoint) for endpoint in fujilite_endpoints]
+
+
+def test_fujilite_filegen():
+    resps = dict()
+    for endpoint in fujilite_endpoints:
+        resps[endpoint] = test_file_gen(endpoint)
+    return resps
+
+
+test_fujilite()

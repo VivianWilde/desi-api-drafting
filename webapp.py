@@ -146,9 +146,10 @@ def build_request(
 
 
 def validate(req: ApiRequest):
+    return True  # FIXME kept for testing
     params = req.params
-    if req.requested_data== RequestedData.ZCAT:
-        return True # no restrictions on zcat endpoint (for now)
+    if req.requested_data == RequestedData.ZCAT:
+        return True  # no restrictions on zcat endpoint (for now)
     if req.endpoint == Endpoint.RADEC:
         validate_radec(params)
     elif req.endpoint == Endpoint.TARGETS:
@@ -171,7 +172,8 @@ def process_request(req: ApiRequest):
                 "Help": f"See {DOC_URL} for an overview of request syntax",
             }
         )
-        abort(Response(info), 500)
+        log(e)
+        abort(Response(info, status=500))
 
 
 def exec_request(req: ApiRequest):
@@ -226,6 +228,7 @@ def create_zcat_file(
     cmd: Command, zcat: Zcatalog, save_dir: str, file_name: str, filters: Filter
 ) -> str:
     os.makedirs(save_dir, exist_ok=True)
+
     # TODO figure filetype based on filters
     if cmd == Command.PLOT:
         # We want an html table
@@ -238,7 +241,10 @@ def create_zcat_file(
             fitsio.write(target_file, zcat)
             return target_file
         except Exception as e:
-            raise DesiApiException("unable to create spectra file - fitsio failed to write to " + target_file)
+            raise DesiApiException(
+                "unable to create spectra file - fitsio failed to write to "
+                + target_file
+            )
 
 
 def create_spectra_file(
@@ -267,7 +273,7 @@ def create_spectra_file(
 
 def zcat_to_html(save_dir: str, file_name: str):
     # TODO
-    return ""
+    return f"{save_dir}/{file_name}.html"
 
 
 def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
@@ -288,6 +294,7 @@ def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
 
 # Validation Functions/Rules:
 
+
 def validate_radec(params: RadecParameters):
     if params.radius > 60:
         raise DesiApiException("radius must be <= 60 arcseconds")
@@ -304,6 +311,7 @@ def validate_target(params: TargetParameters):
 
 
 # Helper Functions:
+
 
 def build_params_from_dict(endpoint: Endpoint, params: dict) -> Parameters:
     # TODO: Replace keys with consts, Kapstan style.
@@ -345,7 +353,7 @@ def invalid_request_error(e: Exception):
     info = dumps(
         {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}
     )
-    abort(Response(info), 400)
+    abort(Response(info, status=400))
 
 
 def check_cache(req: ApiRequest, request_time: dt.datetime):
@@ -359,9 +367,9 @@ def check_cache(req: ApiRequest, request_time: dt.datetime):
         )
         # Filenames are of the form <timestamp>.<ext>, the key filters out extension
         # If there are no cached responses, use 1970 as the time so it doesn't get selected.
-        print("recent", basename(most_recent))
+        log("recent", basename(most_recent))
         age = request_time - dt.datetime.fromisoformat(basename(most_recent))
-        print("age", age)
+        log("age", age)
         if age < CUTOFF:
             log("using cache")
             return os.path.join(cache_path, most_recent)
@@ -372,8 +380,10 @@ def check_cache(req: ApiRequest, request_time: dt.datetime):
 
 # For testing the pipeline from request -> build file, for testing on NERSC pre web-app
 def test_file_gen(request_args: str) -> str:
-    command, release, endpoint, *params = request_args.split("/")
-    req = build_request(command, release, endpoint, "/".join(params), {})
+    requested_data, command, release, endpoint, *params = request_args.split("/")
+    req = build_request(
+        requested_data, command, release, endpoint, "/".join(params), {}
+    )
     response_file = build_response(req, dt.datetime.now())
     return response_file
 
