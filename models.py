@@ -12,7 +12,8 @@ import utils
 # Models and constants
 
 # CONFIG_FILE = f"{os.getenv('HOME')}/.config/desi-api.toml"
-CONFIG_FILE = "/home/vivien/d/urap/desi-api/docker-utilities/default.toml"
+# CONFIG_FILE = "/home/vivien/d/urap/desi-api/docker-utilities/default.toml"
+CONFIG_FILE = os.path.dirname(__file__)+"/docker-utilities/default.toml"
 with open(CONFIG_FILE, "rb") as conf:
     CONFIG = tomllib.load(conf)
 
