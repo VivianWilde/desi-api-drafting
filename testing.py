@@ -183,13 +183,13 @@ def test_post_targets():
 
 fujilite_endpoints = [
     # "spectra/plot/fujilite/radec/210.9,24.8,180", # FIXME
-    # "spectra/download/fujilite/radec/210.9,24.8,180",
-    "spectra/plot/fujilite/tile/80858/600,900,1000",
-    # "spectra/plot/fujilite/targets/39628368387245557,39628368404022902", #Works
-    # "spectra/download/fujilite/radec/210.9,24.8,180", # Works
-    # "zcat/download/fujilite/radec/210.9,24.8,180", # Works
-    "zcat/download/fujilite/tile/80858/600,900,1000",
-    # "zcat/download/fujilite/targets/39628368387245557,39628368404022902", # Works
+    "spectra/download/fujilite/radec/210.9,24.8,180", # Works
+    # "spectra/plot/fujilite/tile/80858/600,900,1000", # FIXME
+    "spectra/plot/fujilite/targets/39628368387245557,39628368404022902", # Works
+    "spectra/download/fujilite/radec/210.9,24.8,180", # Works
+    "zcat/download/fujilite/radec/210.9,24.8,180", # Works
+    "zcat/download/fujilite/tile/80858/600,900,1000", # Works
+    "zcat/download/fujilite/targets/39628368387245557,39628368404022902", # Works
 ]
 
 zcat_plot_endpoints = [

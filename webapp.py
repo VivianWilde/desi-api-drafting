@@ -15,6 +15,7 @@ from prospect.viewer import plotspectra
 import build_spectra
 from models import *
 from utils import *
+from cache import check_cache
 
 DEBUG = True
 app = Flask(__name__)
@@ -289,7 +290,8 @@ def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
         )
         return f"{save_dir}/{file_name}.html"
     except Exception as e:
-        raise DesiApiException("unable to produce plot")
+        raise e
+        # raise DesiApiException("unable to produce plot")
 
 
 # Validation Functions/Rules:
@@ -356,28 +358,6 @@ def invalid_request_error(e: Exception):
     abort(Response(info, status=400))
 
 
-def check_cache(req: ApiRequest, request_time: dt.datetime):
-    cache_path = f"{CACHE}/{req.get_cache_path()}"
-    if os.path.isdir(cache_path):
-        cached_responses = os.listdir(cache_path)
-        most_recent = (
-            max(cached_responses, key=basename)
-            if len(cached_responses)
-            else dt.datetime.utcfromtimestamp(0).isoformat()
-        )
-        # Filenames are of the form <timestamp>.<ext>, the key filters out extension
-        # If there are no cached responses, use 1970 as the time so it doesn't get selected.
-        log("recent", basename(most_recent))
-        age = request_time - dt.datetime.fromisoformat(basename(most_recent))
-        log("age", age)
-        if age < CUTOFF:
-            log("using cache")
-            return os.path.join(cache_path, most_recent)
-        else:
-            log("rebuilding")
-            return None
-
-
 # For testing the pipeline from request -> build file, for testing on NERSC pre web-app
 def test_file_gen(request_args: str) -> str:
     requested_data, command, release, endpoint, *params = request_args.split("/")
@@ -388,5 +368,9 @@ def test_file_gen(request_args: str) -> str:
     return response_file
 
 
-if __name__ == "__main__":
+def main():
     app.run()
+
+
+if __name__ == "__main__":
+    main()

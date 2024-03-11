@@ -540,11 +540,11 @@ Every hour, if the cache dir is scary big, nuke it.
 * Mail
 Hi Stephen,
 
-I've run into an error with the ="spectra/plot/fujilite/radec/210.9,24.8,180"= endpoint, which I've narrowed down to a bug in how my code interacts with =prospect.viewer.plot_spectra=.
+I've run into an error with the `"spectra/plot/fujilite/radec/210.9,24.8,180"` endpoint, which I've narrowed down to a bug in how my code interacts with `prospect.viewer.plot_spectra`.
 
-Specifically, the Plot endpoint fails, but if I try the same request with Download instead it works fine, so I'm pretty sure the bug is specifically related to =plotspectra=.
+Specifically, the Plot endpoint fails, but if I try the same request with Download instead it works fine, so I'm pretty sure the bug is specifically related to `plotspectra`.
 
-I've attached the relevant function call (this is the only time I call =plotspectra= in my code), as well as the relevant part of the traceback. My guess is that the naive call to =plotspectra=  asks it to plot a target of type =QSO=, and either =plotspectra= doesn't know how to draw those or it isn't able to find the template/specifications for drawing them.
+I've attached the relevant function call (this is the only time I call `plotspectra` in my code), as well as the relevant part of the traceback. My guess is that the naive call to `plotspectra`  asks it to plot a target of type `QSO`, and either `plotspectra` doesn't know how to draw those or it isn't able to find the template/specifications for drawing them.
 
 #+begin_src python
 plotspectra(
@@ -570,3 +570,52 @@ plotspectra(
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 KeyError: ('QSO', '')
 #+end_src
+
+
+
+
+* Review - running all the things
+Ultimately, we package the whole thing into a docker container.
+So it makes sense to build a CLI wrapper around it.
+So if we call the container vi-api, we can run =vi-api clean-cache= or =vi-api start-server --private= and so on just as CLI things.
+
+Things we might want to run:
+
+API server, in various modes (with the config file location specified)
+Tests on the image
+Cache clean: Routine and emergency (with the config file location specified)
+
+
+Basic idea:
+
+Build a wrapper cli.py or main.py
+In that, use argparse and other cool stuff to build a basic CLI.
+
+Then in Dockerfile,
+
+ENTRYPOINT = python3 ./main.py
+
+So args automatically get forwarded
+
+** Basic idea
+There's a cli.py in the docker image, and a run.py that generates the mount commands and runs.
+
+Ultimately, we need to pass the following to the python script inside the docker image:
+
+- what command to run: start server, or clear cache
+- where to locate the config file
+
+
+So the entrypoint should be cli.py
+So syntax is
+
+~python3 cli.py <command> --config-file=<file>~
+
+So syntax for the docker run is
+~docker run --mount <...> <image_name> <command> --config-file <file>~
+
+So basically, we need to first write cli.py, and next we need to add options to run.py to capture the public/private flag <command> and <args> onto
+
+
+Desired user-facing format:
+~python3 run.py <command> --config-file <file> --<public/private>~

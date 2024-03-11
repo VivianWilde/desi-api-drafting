@@ -5,11 +5,13 @@ cutoff = 60
 
 # Do we want to clean cache frequently, or whenever it hits a certain size. Open question
 cache_clean_frequency = 60
-
+[cache]
+max_cache_age = 60
+max_cache_size = '1gb'
 
 
 [paths]
 # Absolute, but ~ is allowed
 sql = "~/desi-sql"
+cache= "~/tmp/desi-api-cache"
 spectro_redux=""
-cache = "~/tmp/desi-api-cache"

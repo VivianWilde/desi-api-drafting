@@ -118,7 +118,7 @@ def get_tile_spectra(
     if isinstance(spectra, Tuple):
         spectra_data, redrock = spectra
         # keep = np.isin(redrock["FIBERID"], fibers) & redrock["TILE"]==tile
-        # spectra_data.extra_catalog = redrock
+        spectra_data.extra_catalog = redrock
         return spectra_data
     else:
         return spectra

@@ -7,10 +7,10 @@ from enum import Enum
 from typing import List, Mapping, Tuple
 
 from numpy import ndarray
+import utils
 
 # Models and constants
 
-# TODO: Fix for docker edition
 # CONFIG_FILE = f"{os.getenv('HOME')}/.config/desi-api.toml"
 CONFIG_FILE = "/home/vivien/d/urap/desi-api/docker-utilities/default.toml"
 with open(CONFIG_FILE, "rb") as conf:
@@ -20,11 +20,15 @@ with open(CONFIG_FILE, "rb") as conf:
 def get_dir(key: str):
     return os.path.expanduser(CONFIG["paths"][key])
 
-
+cache_info = CONFIG["cache"]
 CACHE = get_dir("cache")
 SPECTRO_REDUX = get_dir("spectro_redux") or os.getenv("DESI_SPECTRO_REDUX")
 SQL_DIR = get_dir("sql")
-CUTOFF = dt.timedelta(minutes=CONFIG["cutoff"])
+MAX_CACHE_AGE = dt.timedelta(minutes=cache_info["max_cache_age"])
+MAX_CACHE_SIZE = utils.get_max_cache_size(cache_info["max_cache_size"])
+
+
+# TODO: Conversion, so that in config it can specify a unit (gigs/megs/etc.) and we convert to bytes
 
 # Type aliases my beloved
 Dataframe = ndarray
