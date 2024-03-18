@@ -43,7 +43,7 @@ def get_config_map(CONFIG_FILE: str):
         CONFIG = tomllib.load(conf)
 
         for k in CONFIG["paths"]:
-            CONFIG["paths"][k]=os.path.expanduser(CONFIG["paths"][key])
+            CONFIG["paths"][k]=os.path.expanduser(CONFIG["paths"][k])
 
         return CONFIG
 

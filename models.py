@@ -9,23 +9,6 @@ from typing import List, Mapping, Tuple
 from numpy import ndarray
 import utils
 
-# Models and constants
-
-# CONFIG_FILE = f"{os.getenv('HOME')}/.config/desi-api.toml"
-CONFIG_FILE = "/home/vivien/d/urap/desi-api/docker-utilities/default.toml"
-with open(CONFIG_FILE, "rb") as conf:
-    CONFIG = tomllib.load(conf)
-
-
-def get_dir(key: str):
-    return os.path.expanduser(CONFIG["paths"][key])
-
-cache_info = CONFIG["cache"]
-CACHE = get_dir("cache")
-SPECTRO_REDUX = get_dir("spectro_redux") or os.getenv("DESI_SPECTRO_REDUX")
-SQL_DIR = get_dir("sql")
-MAX_CACHE_AGE = dt.timedelta(minutes=cache_info["max_cache_age"])
-MAX_CACHE_SIZE = utils.get_max_cache_size(cache_info["max_cache_size"])
 
 # Type aliases my beloved
 Dataframe = ndarray
@@ -142,14 +125,14 @@ class DataRelease:
     tile_dir: str
     tile_fits: str
     healpix_fits: str
-    sqlite_file: str
+    # sqlite_file: str
 
     def __init__(self, name: str) -> None:
         self.name = name.lower()
-        self.directory = f"{SPECTRO_REDUX}/{self.name}"
+        self.directory = f"{os.getenv('DESI_SPECTRO_REDUX')}/{self.name}"
         self.tile_fits = (
             f"{self.directory}/zcatalog/zall-tilecumulative-{self.name}.fits"
         )
         self.tile_dir = f"{self.directory}/tiles/cumulative"
         self.healpix_fits = f"{self.directory}/zcatalog/zall-pix-{self.name}.fits"
-        self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
+        # self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
