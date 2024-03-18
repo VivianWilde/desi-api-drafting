@@ -630,3 +630,13 @@ Desired user-facing format:
 -
 *** Cache
 Make the cache clean stuff take in cache path info as a param, so config file extraction happens there
+* <2024-03-18 Mon>
+- TODO: Check if docs+readme
+- Cache location
+- Cache cutoff
+- Cache max size
+- Spectro redux
+
+- Tables
+- Podman
+- Update docs/readme

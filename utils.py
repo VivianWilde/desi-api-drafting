@@ -44,6 +44,7 @@ def get_config_map(CONFIG_FILE: str):
 
         for k in CONFIG["paths"]:
             CONFIG["paths"][k]=os.path.expanduser(CONFIG["paths"][k])
+        CONFIG["cache"]["path"]=os.path.expanduser(CONFIG["cache"]["path"])
 
         return CONFIG
 

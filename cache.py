@@ -19,7 +19,7 @@ def check_cache(req: ApiRequest, request_time: dt.datetime, cache_conf: dict):
         log("recent", basename(most_recent))
         age = request_time - dt.datetime.fromisoformat(basename(most_recent))
         log("age", age)
-        if age < cache_conf["max_age"]:
+        if age < dt.timedelta(minutes=cache_conf["max_age"]):
             log("using cache")
             return os.path.join(cache_path, most_recent)
         else:
@@ -33,7 +33,7 @@ def clean_cache(cache_config: dict):
     :returns:
 
     """
-    for root, dirs, files in os.walk(CACHE):
+    for root, dirs, files in os.walk(cache_config["path"]):
         for f in files:
             fullpath = f"{root}/{f}"
             atime = dt.datetime.fromtimestamp(os.path.getatime(fullpath))
