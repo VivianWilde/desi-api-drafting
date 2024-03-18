@@ -619,3 +619,14 @@ So basically, we need to first write cli.py, and next we need to add options to 
 
 Desired user-facing format:
 ~python3 run.py <command> --config-file <file> --<public/private>~
+* Priorities <2024-03-11 Mon>
+- Experiment with using the non-MUI library
+- Finish the refactor so the config file stuff works.
+- Play with docker+podman config files
+** Load conf file
+*** Webapp
+- Pass the config into the flask app config somehow
+- Refactor the functions to extract options from that config.
+-
+*** Cache
+Make the cache clean stuff take in cache path info as a param, so config file extraction happens there

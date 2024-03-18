@@ -27,9 +27,6 @@ SQL_DIR = get_dir("sql")
 MAX_CACHE_AGE = dt.timedelta(minutes=cache_info["max_cache_age"])
 MAX_CACHE_SIZE = utils.get_max_cache_size(cache_info["max_cache_size"])
 
-
-# TODO: Conversion, so that in config it can specify a unit (gigs/megs/etc.) and we convert to bytes
-
 # Type aliases my beloved
 Dataframe = ndarray
 Target = Dataframe

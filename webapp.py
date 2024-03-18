@@ -9,7 +9,7 @@ import desispec.io
 import desispec.spectra
 import fitsio
 from desispec.spectra import Spectra
-from flask import Flask, Response, abort, redirect, request, send_file
+from flask import Config, Flask, Response, abort, redirect, request, send_file
 from prospect.viewer import plotspectra
 
 import build_spectra
@@ -19,8 +19,7 @@ from cache import check_cache
 
 DEBUG = True
 app = Flask(__name__)
-app.config.from_object(__name__)
-app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
+# app.config.from_object(__name__)
 
 DOC_URL = "https://github.com/VivianWilde/desi-api-drafting/blob/main/userdoc.org"
 
@@ -204,10 +203,10 @@ def build_response(req: ApiRequest, request_time: dt.datetime) -> str:
     :param request_time: The time the request was made, used for cache checks, etc.
     :returns: A complete path (including the file extension) to a created file that should be sent back as the response
     """
-    cached = check_cache(req, request_time)
+    cached = check_cache(req, request_time, app.config['cache'])
     if cached:
         return cached
-    cache_path = f"{CACHE}/{req.get_cache_path()}"
+    cache_path = f"{app.config['cache']['path']}/{req.get_cache_path()}"
 
     if req.requested_data == RequestedData.SPECTRA:
         spectra = build_spectra.handle_spectra(req)
@@ -368,9 +367,12 @@ def test_file_gen(request_args: str) -> str:
     return response_file
 
 
-def main():
+def run_app(config: dict):
+    app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
+    app.config.update(config)
+    print(app.config)
     app.run()
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

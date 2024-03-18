@@ -38,27 +38,14 @@ def log(*args):
     print("LOG INFO:", *args)
 
 
-def clean_cache():
-    # Look inside every dir
-    # For each dir:
-    # Delete everything older, if it's empty delete the top-level dir as well.
-    pass
-
-
 def get_config_map(CONFIG_FILE: str):
     with open(CONFIG_FILE, "rb") as conf:
         CONFIG = tomllib.load(conf)
 
-        def get_dir(key: str):
-            return os.path.expanduser(CONFIG["paths"][key])
+        for k in CONFIG["paths"]:
+            CONFIG["paths"][k]=os.path.expanduser(CONFIG["paths"][key])
 
-        return dict(
-            CACHE=get_dir("cache"),
-            SPECTRO_REDUX=get_dir("spectro_redux") or os.getenv("DESI_SPECTRO_REDUX"),
-            SQL_DIR=get_dir("sql"),
-            MAX_CACHE_AGE=dt.timedelta(minutes=CONFIG["max_cache_age"]),
-            MAX_CACHE_SIZE=get_max_cache_size(CONFIG["max_cache_size"]),
-        )
+        return CONFIG
 
 
 def get_bytes(size, suffix):

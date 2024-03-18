@@ -16,10 +16,12 @@ def main():
     args = parser.parse_intermixed_args()
     config = utils.get_config_map(args.config_file)
     if args.command == "server":
-        webapp.main()
+        webapp.run_app(config)
     elif args.command == "clean_cache":
         cache.clean_cache()
     elif args.command == "emergency_clean_cache":
         cache.emergency_clean_cache()
 # TODO: refactor so that config file location is from here, not hardcoded.
 # Basic idea: Do the config file reading and processing inside this main(). Pass the resulting dict to the functions.
+if __name__ == "__main__":
+    main()
