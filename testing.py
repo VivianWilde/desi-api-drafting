@@ -21,6 +21,7 @@ def test_tile_zcat():
     )
     result = handle_zcatalog(req)
     print(result)
+    return result
 
 
 def test_tile():
@@ -206,6 +207,13 @@ def test_fujilite():
     return resps
     # resps = [test_get(endpoint) for endpoint in fujilite_endpoints]
 
+def test_fujilite_plot():
+
+    resps = dict()
+    for endpoint in zcat_plot_endpoints:
+        resps[endpoint] = test_get(endpoint)
+    return resps
+
 
 def test_fujilite_filegen():
     resps = dict()
@@ -214,4 +222,4 @@ def test_fujilite_filegen():
     return resps
 
 
-test_fujilite()
+test_fujilite_plot()

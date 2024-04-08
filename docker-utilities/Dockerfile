@@ -1,9 +1,19 @@
-FROM python
+FROM desipod:dev
 
-COPY dependencies.txt dependencies.txt
+#- Get the config-location branch of desi-api-testing,
+#- which has a workaround for the default config location.
+# RUN  mkdir -p $DESI_ROOT/code \
+#   && cd $DESI_ROOT/code \
+#   && git clone https://github.com/VivianWilde/desi-api-drafting \
+#   && cd desi-api-drafting \
+#   && git checkout config-location
 
-RUN pip3 install -r dependencies.txt
+# Bring in the code, and also some of the other fripperies
+COPY .. .
 
-COPY . .
+# Volumes
+docker volume create desi-api-cache
 
-CMD ["python3", "-m" , "flask", "run", "--host=0.0.0.0"]
+# Crontab
+
+ENTRYPOINT cd $DESI_ROOT/code/desi-api-drafting && python cli.py

@@ -18,9 +18,9 @@ def main():
     if args.command == "server":
         webapp.run_app(config)
     elif args.command == "clean_cache":
-        cache.clean_cache()
+        cache.clean_cache(config["cache"])
     elif args.command == "emergency_clean_cache":
-        cache.emergency_clean_cache()
+        cache.emergency_clean_cache(config["cache"])
 # TODO: refactor so that config file location is from here, not hardcoded.
 # Basic idea: Do the config file reading and processing inside this main(). Pass the resulting dict to the functions.
 if __name__ == "__main__":

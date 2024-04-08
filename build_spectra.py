@@ -294,7 +294,7 @@ def get_populated_target_spectra(
     return target_spectra
 
 
-def clause_from_filter(key: str, value: str, targets: Dataframe):
+def clause_from_filter(key: str, value: str, targets: DataFrame):
     operator_fns = {
         ">": operator.gt,
         "=": operator.eq,

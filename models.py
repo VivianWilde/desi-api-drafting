@@ -7,14 +7,15 @@ from enum import Enum
 from typing import List, Mapping, Tuple
 
 from numpy import ndarray
+from pandas import DataFrame as DFType
 import utils
 
 
 # Type aliases my beloved
-Dataframe = ndarray
-Target = Dataframe
+DataFrame = ndarray
+Target = DataFrame
 Filter = Mapping[str, str]
-Zcatalog = Dataframe
+Zcatalog = DataFrame
 
 
 def canonise_release_name(release: str) -> str:
@@ -107,7 +108,7 @@ class ApiRequest:
         """Return the path (relative to cache dir) to write this request to
         :returns:
         """
-        return self.replace_for_fitsio(f"{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}")
+        return self.replace_for_fitsio(f"{self.requested_data}-{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}")
 
     @staticmethod
     def replace_for_fitsio(s: str):

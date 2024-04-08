@@ -574,6 +574,69 @@ KeyError: ('QSO', '')
 
 
 
+* Priorities <2024-03-11 Mon>
+- Experiment with using the non-MUI library
+- Finish the refactor so the config file stuff works.
+- Play with docker+podman config files
+** Load conf file
+*** Webapp
+- Pass the config into the flask app config somehow
+- Refactor the functions to extract options from that config.
+-
+*** Cache
+Make the cache clean stuff take in cache path info as a param, so config file extraction happens there
+* <2024-03-18 Mon>
+- TODO: Check if docs+readme
+
+- Cache location
+- Cache cutoff
+- Cache max size
+- Spectro redux
+
+- Tables
+- Podman
+- Update docs/readme
+* Tabling
+How do we want to do this.
+
+Abstractly, we're given data in json-ish format, and want to render it as a pretty-looking html table.
+
+They have an ajax thing for this.
+
+
+So basic idea: A flask/jinja HTML template. In order to html plot we secretly do two things:
+We write json-ified data to data.json
+Inside the HTML file, we basically do ~data=$.get('data.json', 'json')~ or whatever, and then plug that into a datatable that's appropriately configured.
+
+TODO:
+- Figure out the json file -> js object jquery pipeline
+- Talk to Stephen about what properties the datatable should have aesthetically. This'll define the render functions for each column.
+** Pipeline
+$.get()
+* Tabling - plan
+- Modify webapp.py so we can either send a file or render a template intelligently
+- Make the zcat_to_html function render/populate a jinja template. Pass in the path to the json data, possibly something like filters/conf info
+* Dockering
+- Short-term goal: Have something running in docker that can be demo'd
+** Thinking out loud
+** Storage/dirs/mechanisms we need
+- Mount the desi stuff
+- Read a config file (mounted)
+- Store a crontab
+- Cron job infrastructure
+- Internal volumes: Cache
+- Internal volumes: Store templates and stuff. More generally, a source repo. This is free
+*** Dockerfile/Launching
+- Install dependencies
+- Including Stephen's trickery for installing desi stuff
+- Patch/hackery for desi/bokeh templates
+- Create volumes for the cache, and anything we ever write to.
+- Crontab setup. So then all the cache-cleaning happens internally, in principle.
+- So the entrypoint is "run cli.py with some user-specified args tacked on"
+-
+
+Benefit of using volumes: If one instance is running the server and the second does a cache-clean, it's fine! Performance is terrible, but it works as intended.
+Realisation: I'm stupid, since if the cache_dir is a volume, we could have just hardcoded it the whole time. Ugh.
 * Review - running all the things
 Ultimately, we package the whole thing into a docker container.
 So it makes sense to build a CLI wrapper around it.
@@ -619,24 +682,3 @@ So basically, we need to first write cli.py, and next we need to add options to 
 
 Desired user-facing format:
 ~python3 run.py <command> --config-file <file> --<public/private>~
-* Priorities <2024-03-11 Mon>
-- Experiment with using the non-MUI library
-- Finish the refactor so the config file stuff works.
-- Play with docker+podman config files
-** Load conf file
-*** Webapp
-- Pass the config into the flask app config somehow
-- Refactor the functions to extract options from that config.
--
-*** Cache
-Make the cache clean stuff take in cache path info as a param, so config file extraction happens there
-* <2024-03-18 Mon>
-- TODO: Check if docs+readme
-- Cache location
-- Cache cutoff
-- Cache max size
-- Spectro redux
-
-- Tables
-- Podman
-- Update docs/readme

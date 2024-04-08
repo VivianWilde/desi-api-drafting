@@ -2,7 +2,7 @@
 
 import datetime as dt
 import os
-from json import dumps
+import json
 from typing import List
 
 import desispec.io
@@ -11,6 +11,10 @@ import fitsio
 from desispec.spectra import Spectra
 from flask import Config, Flask, Response, abort, redirect, request, send_file
 from prospect.viewer import plotspectra
+import pandas as pd
+
+from numpyencoder import NumpyEncoder
+
 
 import build_spectra
 from models import *
@@ -33,7 +37,7 @@ def show_doc():
 
 @app.route(
     "/api/v1/<requested_data>/<command>/<release>/<endpoint>/<path:endpoint_params>",
-    methods=["GET"],
+    methods=["GET"]
 )
 def handle_get(
     requested_data: str, command: str, release: str, endpoint: str, endpoint_params: str
@@ -165,7 +169,7 @@ def process_request(req: ApiRequest):
     try:
         return exec_request(req)
     except DesiApiException as e:
-        info = dumps(
+        info = json.dumps(
             {
                 "Request": repr(req),
                 "Error": str(e),
@@ -232,7 +236,7 @@ def create_zcat_file(
     # TODO figure filetype based on filters
     if cmd == Command.PLOT:
         # We want an html table
-        return zcat_to_html(save_dir, file_name)
+        return zcat_to_html(zcat, save_dir, file_name)
     else:
         # Do the complex figuring.
         # For now, just do FITS.
@@ -245,6 +249,13 @@ def create_zcat_file(
                 "unable to create spectra file - fitsio failed to write to "
                 + target_file
             )
+
+def zcat_to_json_str(zcat: Zcatalog) -> str:
+    keys = zcat.dtype.names
+    return json.dumps([dict(zip(keys, record)) for record in zcat], cls=NumpyEncoder )
+
+
+
 
 
 def create_spectra_file(
@@ -271,9 +282,18 @@ def create_spectra_file(
         raise DesiApiException("invalid command (must be PLOT or DOWNLOAD)")
 
 
-def zcat_to_html(save_dir: str, file_name: str):
-    # TODO
-    return f"{save_dir}/{file_name}.html"
+def zcat_to_html(zcat: Zcatalog, save_dir: str, file_name: str) -> str:
+    # TODO properly
+   json_file = f"{save_dir}/data.json"
+   html_file = f"{save_dir}/{file_name}.html"
+   with open(json_file, "w") as out:
+       out.write(zcat_to_json_str(zcat))
+
+
+   return html_file
+
+
+
 
 
 def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
@@ -370,7 +390,6 @@ def test_file_gen(request_args: str) -> str:
 def run_app(config: dict):
     app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
     app.config.update(config)
-    print(app.config)
     app.run()
 
 
