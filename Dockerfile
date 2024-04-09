@@ -7,13 +7,12 @@ FROM desipod:dev
 #   && git clone https://github.com/VivianWilde/desi-api-drafting \
 #   && cd desi-api-drafting \
 #   && git checkout config-location
-
+RUN pip install pandas numpyencoder
 # Bring in the code, and also some of the other fripperies
-COPY .. .
+COPY *.py /code/
+COPY docker-utilities/default.toml /config/default.toml
 
-# Volumes
-docker volume create desi-api-cache
+# Crontab TODO
 
-# Crontab
-
-ENTRYPOINT cd $DESI_ROOT/code/desi-api-drafting && python cli.py
+# ENTRYPOINT cd $DESI_ROOT/code/desi-api-drafting && python cli.py
+ENTRYPOINT python /code/cli.py $@

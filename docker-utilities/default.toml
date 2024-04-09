@@ -1,16 +1,16 @@
 # Default config values for the DESI API
 
+spectro_redux="/spectro_redux"
 
 [cache]
-path= "~/tmp/desi-api-cache"
+path= "/cache"
 # How old must a cached response be before we discard it, in minutes
 max_age = 60
 # How large the cache is allowed to get
 max_size = '1gb'
 
 
-[paths]
+# [paths]
 # Absolute, but ~ is allowed
 # CURRENTLY IGNORED
-sql = "~/desi-sql"
-spectro_redux=""
+# sql = "~/desi-sql"

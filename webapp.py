@@ -388,9 +388,9 @@ def test_file_gen(request_args: str) -> str:
 
 
 def run_app(config: dict):
-    app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
+    # app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
     app.config.update(config)
-    app.run()
+    app.run(host="0.0.0")
 
 
 # if __name__ == "__main__":

@@ -1,14 +1,10 @@
 #!/usr/bin/env ipython3
-import datetime as dt
-import os
-import tomllib
+from os import getenv
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Mapping, Tuple
 
 from numpy import ndarray
-from pandas import DataFrame as DFType
-import utils
 
 
 # Type aliases my beloved
@@ -16,6 +12,11 @@ DataFrame = ndarray
 Target = DataFrame
 Filter = Mapping[str, str]
 Zcatalog = DataFrame
+
+SPECTRO_REDUX = getenv("DESI_SPECTRO_REDUX")
+# CACHE = "/cache" # Where we mount cache
+DEFAULT_CONF="/config/default.toml"
+USER_CONF="/config/config.toml"
 
 
 def canonise_release_name(release: str) -> str:
@@ -108,12 +109,20 @@ class ApiRequest:
         """Return the path (relative to cache dir) to write this request to
         :returns:
         """
-        return self.replace_for_fitsio(f"{self.requested_data}-{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}")
+        return self.replace_for_fitsio(
+            f"{self.requested_data}-{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}"
+        )
 
     @staticmethod
     def replace_for_fitsio(s: str):
         """FitsIO has weird quirks regarding file names it allows, we try to work around them here"""
-        return s.replace(" ", "").replace("(", "<").replace(")", ">").replace("[", "<").replace("]", ">")
+        return (
+            s.replace(" ", "")
+            .replace("(", "<")
+            .replace(")", ">")
+            .replace("[", "<")
+            .replace("]", ">")
+        )
 
     def validate(self) -> bool:
         return True
@@ -130,7 +139,7 @@ class DataRelease:
 
     def __init__(self, name: str) -> None:
         self.name = name.lower()
-        self.directory = f"{os.getenv('DESI_SPECTRO_REDUX')}/{self.name}"
+        self.directory = f"{SPECTRO_REDUX}/{self.name}"
         self.tile_fits = (
             f"{self.directory}/zcatalog/zall-tilecumulative-{self.name}.fits"
         )

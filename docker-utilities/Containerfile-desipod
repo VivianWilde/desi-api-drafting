@@ -2,7 +2,7 @@ FROM docker.io/library/python:3.11
 
 #- install dependencies
 RUN  python -m pip install --upgrade pip setuptools wheel \
-  && python -m pip install astropy scipy numba "numpy<2.0" pytest fitsio "bokeh<3" flask \
+  && python -m pip install astropy scipy numba "numpy<2.0" pytest fitsio "bokeh<3" flask pandas \
   && python -m pip install --no-deps git+https://github.com/desihub/desiutil \
   && python -m pip install --no-deps git+https://github.com/desihub/desitarget \
   && python -m pip install --no-deps git+https://github.com/desihub/desispec \
