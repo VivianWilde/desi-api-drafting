@@ -37,7 +37,7 @@ def show_doc():
 
 @app.route(
     "/api/v1/<requested_data>/<command>/<release>/<endpoint>/<path:endpoint_params>",
-    methods=["GET"]
+    methods=["GET"],
 )
 def handle_get(
     requested_data: str, command: str, release: str, endpoint: str, endpoint_params: str
@@ -207,7 +207,7 @@ def build_response(req: ApiRequest, request_time: dt.datetime) -> str:
     :param request_time: The time the request was made, used for cache checks, etc.
     :returns: A complete path (including the file extension) to a created file that should be sent back as the response
     """
-    cached = check_cache(req, request_time, app.config['cache'])
+    cached = check_cache(req, request_time, app.config["cache"])
     if cached:
         return cached
     cache_path = f"{app.config['cache']['path']}/{req.get_cache_path()}"
@@ -250,12 +250,10 @@ def create_zcat_file(
                 + target_file
             )
 
+
 def zcat_to_json_str(zcat: Zcatalog) -> str:
     keys = zcat.dtype.names
-    return json.dumps([dict(zip(keys, record)) for record in zcat], cls=NumpyEncoder )
-
-
-
+    return json.dumps([dict(zip(keys, record)) for record in zcat], cls=NumpyEncoder)
 
 
 def create_spectra_file(
@@ -284,19 +282,16 @@ def create_spectra_file(
 
 def zcat_to_html(zcat: Zcatalog, save_dir: str, file_name: str) -> str:
     # TODO properly
-   json_file = f"{save_dir}/data.json"
-   html_file = f"{save_dir}/{file_name}.html"
-   with open(json_file, "w") as out:
-       out.write(zcat_to_json_str(zcat))
+    json_file = f"{save_dir}/data.json"
+    html_file = f"{save_dir}/{file_name}.html"
+    with open(json_file, "w") as out:
+        out.write(zcat_to_json_str(zcat))
 
-
-   return html_file
-
-
-
+    return html_file
 
 
 def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
+    log("PLOTTING HTML")
     try:
         plotspectra(
             spectra,
@@ -371,7 +366,7 @@ def build_params_from_strings(endpoint: Endpoint, params: List[str]) -> Paramete
 
 def invalid_request_error(e: Exception):
     """Take an error resulting from an invalid request, and wrap it in a Flask response"""
-    info = dumps(
+    info = json.dumps(
         {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}
     )
     abort(Response(info, status=400))
@@ -390,7 +385,7 @@ def test_file_gen(request_args: str) -> str:
 def run_app(config: dict):
     # app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
     app.config.update(config)
-    app.run(host="0.0.0")
+    app.run(host="0.0.0", debug=True)
 
 
 # if __name__ == "__main__":

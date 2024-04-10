@@ -35,12 +35,12 @@ host_port="127.0.0.1:5000"
 target_port=5000
 port_forward_opt = f"-p {host_port}:{target_port}"
 
-base_run_cmd = f"docker run {cache_mount_opt} {port_forward_opt}"
+base_run_cmd = f"docker run --detach=false {cache_mount_opt} {port_forward_opt}"
 
 # TODO: Other options: Config file, and whether to run
 
 
-target_spectro_redux = "/spectro_redux"
+target_spectro_redux = "/desi/spectro/redux"
 target_config = "/config/config.toml"
 
 
@@ -71,7 +71,8 @@ if __name__ == "__main__":
     with open(args.config_file, "rb") as f:
         config = tomllib.load(f)
 
-    host_spectro_redux = config.get("spectro_redux") or os.getenv("DESI_SPECTRO_REDUX")
+    # host_spectro_redux = config.get("spectro_redux") or
+    host_spectro_redux = os.getenv("DESI_SPECTRO_REDUX")
     # execute("docker volume create desi-api-cache")
 
     config_bind_opt = f"--mount type=bind,src={os.path.abspath(args.config_file)},target={target_config},readonly"
