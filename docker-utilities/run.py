@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     # host_spectro_redux = config.get("spectro_redux") or
     host_spectro_redux = os.getenv("DESI_SPECTRO_REDUX")
-    # execute("docker volume create desi-api-cache")
+    execute("docker volume create desi-api-cache")
 
     config_bind_opt = f"--mount type=bind,src={os.path.abspath(args.config_file)},target={target_config},readonly"
 

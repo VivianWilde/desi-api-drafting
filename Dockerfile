@@ -16,6 +16,8 @@ ENV DESI_ROOT=/desi
 ENV DESI_SPECTRO_REDUX=/desi/spectro/redux
 ENV RR_TEMPLATE_DIR=/desi/redrock-templates
 
+VOLUME /cache
+
 # Crontab TODO
 
 # ENTRYPOINT cd $DESI_ROOT/code/desi-api-drafting && python cli.py
