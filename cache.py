@@ -5,8 +5,8 @@ from utils import *
 import shutil
 
 
-def check_cache(req: ApiRequest, request_time: dt.datetime, cache_conf: dict):
-    cache_path = f"{cache_conf['path']}/{req.get_cache_path()}"
+def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict):
+    cache_path = f"{cache_config['path']}/{req.get_cache_path()}"
     if os.path.isdir(cache_path):
         cached_responses = os.listdir(cache_path)
         most_recent = (
@@ -19,7 +19,7 @@ def check_cache(req: ApiRequest, request_time: dt.datetime, cache_conf: dict):
         log("recent", basename(most_recent))
         age = request_time - dt.datetime.fromisoformat(basename(most_recent))
         log("age", age)
-        if age < dt.timedelta(minutes=cache_conf["max_age"]):
+        if age < dt.timedelta(minutes=cache_config["max_age"]):
             log("using cache")
             return os.path.join(cache_path, most_recent)
         else:

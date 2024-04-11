@@ -2,15 +2,19 @@
 
 import datetime as dt
 import os
-from json import dumps
+import json
 from typing import List
 
 import desispec.io
 import desispec.spectra
 import fitsio
 from desispec.spectra import Spectra
-from flask import Config, Flask, Response, abort, redirect, request, send_file
+from flask import Config, Flask, Response, abort, redirect, render_template, request, send_file
 from prospect.viewer import plotspectra
+import pandas as pd
+
+from numpyencoder import NumpyEncoder
+
 
 import build_spectra
 from models import *
@@ -165,7 +169,7 @@ def process_request(req: ApiRequest):
     try:
         return exec_request(req)
     except DesiApiException as e:
-        info = dumps(
+        info = json.dumps(
             {
                 "Request": repr(req),
                 "Error": str(e),
@@ -203,7 +207,7 @@ def build_response(req: ApiRequest, request_time: dt.datetime) -> str:
     :param request_time: The time the request was made, used for cache checks, etc.
     :returns: A complete path (including the file extension) to a created file that should be sent back as the response
     """
-    cached = check_cache(req, request_time, app.config['cache'])
+    cached = check_cache(req, request_time, app.config["cache"])
     if cached:
         return cached
     cache_path = f"{app.config['cache']['path']}/{req.get_cache_path()}"
@@ -232,7 +236,7 @@ def create_zcat_file(
     # TODO figure filetype based on filters
     if cmd == Command.PLOT:
         # We want an html table
-        return zcat_to_html(save_dir, file_name)
+        return zcat_to_html(zcat, save_dir, file_name)
     else:
         # Do the complex figuring.
         # For now, just do FITS.
@@ -245,6 +249,11 @@ def create_zcat_file(
                 "unable to create spectra file - fitsio failed to write to "
                 + target_file
             )
+
+
+def zcat_to_json_str(zcat: Zcatalog) -> str:
+    keys = zcat.dtype.names
+    return json.dumps([dict(zip(keys, record)) for record in zcat], cls=NumpyEncoder)
 
 
 def create_spectra_file(
@@ -271,12 +280,16 @@ def create_spectra_file(
         raise DesiApiException("invalid command (must be PLOT or DOWNLOAD)")
 
 
-def zcat_to_html(save_dir: str, file_name: str):
-    # TODO
-    return f"{save_dir}/{file_name}.html"
+def zcat_to_html(zcat: Zcatalog, save_dir: str, file_name: str) -> str:
+    html_file = f"{save_dir}/{file_name}.html"
+    json_data = zcat_to_json_str(zcat)
+    with open(html_file, "w") as out:
+        out.write(render_template("table.html", columns=zcat.dtype.names, json_data=json_data))
+    return html_file
 
 
 def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
+    log("PLOTTING HTML")
     try:
         plotspectra(
             spectra,
@@ -351,7 +364,7 @@ def build_params_from_strings(endpoint: Endpoint, params: List[str]) -> Paramete
 
 def invalid_request_error(e: Exception):
     """Take an error resulting from an invalid request, and wrap it in a Flask response"""
-    info = dumps(
+    info = json.dumps(
         {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}
     )
     abort(Response(info, status=400))
@@ -368,10 +381,9 @@ def test_file_gen(request_args: str) -> str:
 
 
 def run_app(config: dict):
-    app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
+    # app.config["SECRET_KEY"] = "7d441f27d441f27567d441f2b6176a"
     app.config.update(config)
-    print(app.config)
-    app.run()
+    app.run(host="0.0.0", debug=True)
 
 
 # if __name__ == "__main__":
