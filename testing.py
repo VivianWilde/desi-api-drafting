@@ -223,4 +223,4 @@ def test_fujilite_filegen():
     return resps
 
 
-test_fujilite()
+test_fujilite_plot()

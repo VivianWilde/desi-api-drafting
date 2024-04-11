@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+
+
+{% block preamble %}
+<head>
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+<script src="https://cdn.datatables.net/2.0.3/js/dataTables.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.css">
+
+</head>
+{% endblock %}
+
+
+
+{% block table %}
+<body>
+<table id="table" class="display table table-striped" style="width:100%">
+        <thead>
+            <tr>
+            </tr>
+        </thead>
+        <tfoot>
+            <tr>
+            </tr>
+        </tfoot>
+    </table>
+{% endblock %}
+
+{% block javascript %}
+  <script>
+      jsonData = JSON.parse({{ json_data|tojson }})
+      new DataTable('#table', {
+      data: jsonData,
+      columns: [
+
+                {% for column in columns %}
+                     {title: '{{ column }}', data: '{{ column }}'},
+                {% endfor %}
+]
+
+                });
+
+  </script>
+{% endblock %}
+
+{% block postamble %}
+</body>
+</html>
+{% endblock %}

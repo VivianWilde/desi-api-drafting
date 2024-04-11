@@ -9,7 +9,7 @@ import desispec.io
 import desispec.spectra
 import fitsio
 from desispec.spectra import Spectra
-from flask import Config, Flask, Response, abort, redirect, request, send_file
+from flask import Config, Flask, Response, abort, redirect, render_template, request, send_file
 from prospect.viewer import plotspectra
 import pandas as pd
 
@@ -281,12 +281,10 @@ def create_spectra_file(
 
 
 def zcat_to_html(zcat: Zcatalog, save_dir: str, file_name: str) -> str:
-    # TODO properly
-    json_file = f"{save_dir}/data.json"
     html_file = f"{save_dir}/{file_name}.html"
-    with open(json_file, "w") as out:
-        out.write(zcat_to_json_str(zcat))
-
+    json_data = zcat_to_json_str(zcat)
+    with open(html_file, "w") as out:
+        out.write(render_template("table.html", columns=zcat.dtype.names, json_data=json_data))
     return html_file
 
 

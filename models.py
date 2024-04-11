@@ -118,10 +118,10 @@ class ApiRequest:
         """FitsIO has weird quirks regarding file names it allows, we try to work around them here"""
         return (
             s.replace(" ", "")
-            .replace("(", "<")
-            .replace(")", ">")
-            .replace("[", "<")
-            .replace("]", ">")
+            .replace("(", "")
+            .replace(")", "")
+            .replace("[", "")
+            .replace("]", "")
         )
 
     def validate(self) -> bool:
