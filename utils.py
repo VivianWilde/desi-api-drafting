@@ -38,18 +38,21 @@ def log(*args):
     print("LOG INFO:", *args)
 
 
-def get_config_map(CONFIG_FILE: str):
+def get_config_map(CONFIG_FILE: str) -> dict:
+    """Read in values from the toml CONFIG_FILE, and expand paths."""
+
     with open(CONFIG_FILE, "rb") as conf:
         CONFIG = tomllib.load(conf)
 
         # for k in CONFIG["paths"]:
         #     CONFIG["paths"][k]=os.path.expanduser(CONFIG["paths"][k])
-        CONFIG["cache"]["path"]=os.path.expanduser(CONFIG["cache"]["path"])
+        CONFIG["cache"]["path"] = os.path.expanduser(CONFIG["cache"]["path"])
 
         return CONFIG
 
 
-def get_bytes(size, suffix):
+def get_bytes(size: float, suffix: str) -> int:
+    """Translate a human-readable measurement like '1gb' into an integer number of bytes"""
     size = int(float(size))
     suffix = suffix.lower()
 
@@ -63,7 +66,7 @@ def get_bytes(size, suffix):
     return False
 
 
-def get_max_cache_size(config_str):
-    size = float(config_str[:-2])
-    suffix = config_str[-2:]
+def get_max_cache_size(cache_size: str) -> int:
+    size = float(cache_size[:-2])
+    suffix = cache_size[-2:]
     return get_bytes(size, suffix)

@@ -12,11 +12,12 @@ DataFrame = ndarray
 Target = DataFrame
 Filter = Mapping[str, str]
 Zcatalog = DataFrame
+Clause = List[bool] # A boolean mask, used in filtering Zcatalogs
 
 SPECTRO_REDUX = getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
-DEFAULT_CONF="/config/default.toml"
-USER_CONF="/config/config.toml"
+DEFAULT_CONF = "/config/default.toml"
+USER_CONF = "/config/config.toml"
 
 
 def canonise_release_name(release: str) -> str:
@@ -47,7 +48,7 @@ class RequestedData(Enum):
     SPECTRA = 2
 
 
-class Command(Enum):
+class ResponseType(Enum):
     UNSPECIFIED = 0
     DOWNLOAD = 1
     PLOT = 2
@@ -99,7 +100,7 @@ class TargetParameters(Parameters):
 @dataclass()
 class ApiRequest:
     requested_data: RequestedData  # zcat/spectra
-    command: Command
+    response_type: ResponseType
     release: str
     endpoint: Endpoint  # tile/target/radec
     params: Parameters
@@ -110,7 +111,7 @@ class ApiRequest:
         :returns:
         """
         return self.replace_for_fitsio(
-            f"{self.requested_data}-{self.command}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}"
+            f"{self.requested_data}-{self.response_type}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}"
         )
 
     @staticmethod

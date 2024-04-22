@@ -13,7 +13,7 @@ from desispec.spectra import Spectra
 from models import *
 from utils import log
 
-# TODO: Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
+# Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.
 
 # TODO params and datarelease should be dfs as well
@@ -157,7 +157,6 @@ def get_radec_zcatalog(
     distfilter = (ra - targets["TARGET_RA"]) ** 2 + (
         dec - targets["TARGET_DEC"]
     ) ** 2 <= radius
-    # TODO test this.
     return targets[distfilter]
 
 
@@ -173,7 +172,7 @@ def get_tile_zcatalog(
         "ZCAT_PRIMARY",
         "TARGET_RA",
         "TARGET_DEC",
-    ]  # TODO
+    ]
     for k in filters.keys():
         desired_columns.append(k)
 
@@ -194,7 +193,7 @@ def get_tile_zcatalog(
 
 def get_target_zcatalog(
     release: DataRelease, target_ids: List[int] = [], filters: Filter = dict()
-) -> List[Target]:
+) -> Zcatalog:
     """
     For each TARGET_ID, read the corresponding target metadata into a Target object.
 
@@ -248,7 +247,7 @@ def get_target_zcatalog(
 
 # TODO needs a better name
 def get_populated_target_spectra(
-    release: DataRelease, targets: List[Target]
+    release: DataRelease, targets: Zcatalog
 ) -> List[Spectra]:
     """
     Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list.
@@ -294,12 +293,22 @@ def get_populated_target_spectra(
     return target_spectra
 
 
-def clause_from_filter(key: str, value: str, targets: DataFrame):
+def clause_from_filter(key: str, value: str, targets: DataFrame) -> Clause:
+    """Given a column name KEY and a filter string VALUE of the form '<operation><value>' and a ZCATALOG of target metadata, create a boolean array where Arr[i] is true iff the i^th record satisfies the filter.
+
+    :param key:
+    :param value:
+    :param targets:
+    :returns:
+
+    """
+
+    # TODO doc
     operator_fns = {
         ">": operator.gt,
         "=": operator.eq,
         "<": operator.lt,
-        "?": lambda x, y: True,
+        "*": lambda x, y: True,
     }
     key = key.upper()
     op = value[0]
@@ -308,7 +317,7 @@ def clause_from_filter(key: str, value: str, targets: DataFrame):
         return func(targets[key], value)
 
     func = operator_fns[op]
-    if op == "?":
+    if op == "*":
         value = ""
     else:
         value = value[1:]  # Actual value. TODO: Handle casting when appropriate
@@ -321,7 +330,15 @@ def filter_spectra(spectra: Spectra, options: Filter) -> Spectra:
     return spectra
 
 
-def filter_zcatalog(zcatalog: Zcatalog, filters: Filter):
+def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
+    """Given a collection of FILTERS of the form {column_name: "<test><value>"}, filter the ZCAT to only include records which satisfy all of those filters and return that filtered copy.
+
+    :param zcatalog:
+    :param filters:
+    :returns:
+
+    """
+
     filtered_keep = np.full(zcatalog.shape, True, dtype=bool)
     for k, v in filters.items():
         clause = clause_from_filter(k, v, zcatalog)

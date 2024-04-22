@@ -5,7 +5,16 @@ from utils import *
 import shutil
 
 
-def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict):
+def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict) -> str|None:
+    """Check whether a suitably recent response to the current request exists in the cache, if it does then return that file, else return None
+
+    :param req:
+    :param request_time:
+    :param cache_config:
+    :returns:
+
+    """
+
     cache_path = f"{cache_config['path']}/{req.get_cache_path()}"
     if os.path.isdir(cache_path):
         cached_responses = os.listdir(cache_path)
@@ -28,7 +37,7 @@ def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict):
 
 
 def clean_cache(cache_config: dict):
-    """Run somewhat frequently (on the order of hours/days), delete files with sufficiently old access times.
+    """Run somewhat frequently (on the order of hours/days), delete files with sufficiently old access times (cutoff is determined by the value in CACHE_CONFIG)
 
     :returns:
 
@@ -43,7 +52,7 @@ def clean_cache(cache_config: dict):
 
 
 def emergency_clean_cache(cache_config: dict):
-    """Run approximately every hour. If the cache directory is beyond a certain size, nuke it."""
+    """Run approximately every hour. If the cache directory is beyond a certain size, defined in CACHE_CONFIG, nuke it."""
     cmd = f"du -s {cache_config['path']}"
     out = subprocess.getoutput(cmd)
     size_bytes = int(out.split()[0])

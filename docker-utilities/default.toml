@@ -1,16 +1,12 @@
 # Default config values for the DESI API
 
+# Usually set to $DESI_SPECTRO_REDUX, the va
 spectro_redux="/spectro_redux"
 
 [cache]
+# The path to the root directory of the cache, where responses are stored once they are generated
 path= "/cache"
 # How old must a cached response be before we discard it, in minutes
 max_age = 60
-# How large the cache is allowed to get
+# How large the cache is allowed to get before we simply remove it and start over
 max_size = '1gb'
-
-
-# [paths]
-# Absolute, but ~ is allowed
-# CURRENTLY IGNORED
-# sql = "~/desi-sql"

@@ -9,8 +9,14 @@ FROM desipod:dev
 #   && git checkout config-location
 # RUN pip install pandas numpyencoder
 # Bring in the code, and also some of the other fripperies
+
 COPY *.py /code/
+ADD templates /templates
 COPY docker-utilities/default.toml /config/default.toml
+
+# For 
+# RUN git clone https://github.com/VivianWilde/desi-api-drafting.git /code
+# COPY /code/docker-utilities/default.toml /config/default.toml
 
 ENV DESI_ROOT=/desi
 ENV DESI_SPECTRO_REDUX=/desi/spectro/redux

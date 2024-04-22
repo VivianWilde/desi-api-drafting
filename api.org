@@ -682,3 +682,18 @@ So basically, we need to first write cli.py, and next we need to add options to 
 
 Desired user-facing format:
 ~python3 run.py <command> --config-file <file> --<public/private>~
+
+
+
+* Documentation TODOs
+- Update endpoint userdocs, including docs on filters
+- Docs on config file
+- Docs on docker setup
+- Reference to datatables+jinja
+- Devdocs: Weird stuff like specifying the flask host
+- The different kinds of cache cleaning
+* Priority
+- Doc
+- Plot endpoints in the docker setup
+- Test filter stuff
+-

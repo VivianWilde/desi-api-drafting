@@ -13,7 +13,7 @@ def test_tile_zcat():
     params = TileParameters(tile=80605, fibers=fibers)
     req = ApiRequest(
         requested_data=RequestedData.ZCAT,
-        command=Command.DOWNLOAD,
+        response_type=ResponseType.DOWNLOAD,
         endpoint=Endpoint.TILE,
         release="fuji",
         params=params,
@@ -29,7 +29,7 @@ def test_tile():
     params = TileParameters(tile=80605, fibers=fibers)
     req = ApiRequest(
         requested_data=RequestedData.SPECTRA,
-        command=Command.DOWNLOAD,
+        response_type=ResponseType.DOWNLOAD,
         endpoint=Endpoint.TILE,
         release="fuji",
         params=params,
@@ -53,7 +53,7 @@ def test_target():
     ]
     params = TargetParameters(target_ids=targets)
     req = ApiRequest(
-        command=Command.DOWNLOAD,
+        response_type=ResponseType.DOWNLOAD,
         endpoint=Endpoint.TARGETS,
         release="fuji",
         params=params,
@@ -76,7 +76,7 @@ def test_target_zcat():
     params = TargetParameters(target_ids=targets)
     req = ApiRequest(
         requested_data=RequestedData.ZCAT,
-        command=Command.DOWNLOAD,
+        response_type=ResponseType.DOWNLOAD,
         endpoint=Endpoint.TARGETS,
         release="fuji",
         params=params,
@@ -107,7 +107,7 @@ def test_target_filters():
     params = TargetParameters(target_ids=targets)
     req = ApiRequest(
         requested_data=RequestedData.SPECTRA,
-        command=Command.DOWNLOAD,
+        response_type=ResponseType.DOWNLOAD,
         endpoint=Endpoint.TARGETS,
         release="fuji",
         params=params,
@@ -171,7 +171,7 @@ def test_get_tile():
 
 def test_post_targets():
     data = {
-        "command": "download",
+        "response_type": "download",
         "release": "fuji",
         "endpoint": "targets",
         "params": "39628473198710603,39632946386177593,39632956452508085,39632971434560784",
@@ -183,11 +183,11 @@ def test_post_targets():
 # Fujilite
 
 fujilite_endpoints = [
-    # "spectra/plot/fujilite/radec/210.9,24.8,180", # FIXME
+    "spectra/plot/fujilite/radec/210.9,24.8,180", # FIXME
     "spectra/download/fujilite/radec/210.9,24.8,180", # Works
-    # "spectra/plot/fujilite/tile/80858/600,900,1000", # FIXME
+    "spectra/plot/fujilite/tile/80858/600,900,1000", # FIXME
     "spectra/download/fujilite/tile/80858/600,900,1000",
-    # "spectra/plot/fujilite/targets/39628368387245557,39628368404022902", # Works
+    "spectra/plot/fujilite/targets/39628368387245557,39628368404022902", # Works
     "spectra/download/fujilite/radec/210.9,24.8,180", # Works
     "zcat/download/fujilite/radec/210.9,24.8,180", # Works
     "zcat/download/fujilite/tile/80858/600,900,1000", # Works
@@ -223,4 +223,4 @@ def test_fujilite_filegen():
     return resps
 
 
-test_fujilite_plot()
+test_fujilite()

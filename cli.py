@@ -1,8 +1,6 @@
 #!/usr/bin/env ipython3
 
 import argparse
-import os
-import sys
 
 import cache
 import utils
@@ -21,7 +19,6 @@ parser.add_argument("-c", "--config-file", default=DEFAULT_CONF)
 
 
 def main():
-    # os.environ["DESI_SPECTRO_REDUX"]="/spectro_redux"
     args = parser.parse_intermixed_args()
     config = utils.get_config_map(args.config_file)
     if args.command == "server":
