@@ -13,7 +13,7 @@ RUN  python -m pip install --upgrade pip setuptools wheel \
 RUN mkdir -p /desi/spectro \
   && cd /desi \
   && git clone https://github.com/desihub/redrock-templates \
-  && curl https://github.com/desihub/redrock-templates/blob/0.7.2/rrtemplate-qso.fits -o redrock-templates/rrtemplate-qso.fits
+  && curl  https://raw.githubusercontent.com/desihub/redrock-templates/0.7.2/rrtemplate-qso.fits -o redrock-templates/rrtemplate-QSO.fits
 
 #- when launching the container, mount an external directory to /desi/spectro/redux
 ENV DESI_ROOT=/desi

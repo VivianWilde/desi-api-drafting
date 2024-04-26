@@ -224,3 +224,4 @@ def test_fujilite_filegen():
 
 
 test_fujilite()
+test_fujilite_plot()

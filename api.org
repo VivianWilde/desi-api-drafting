@@ -697,3 +697,9 @@ Desired user-facing format:
 - Plot endpoints in the docker setup
 - Test filter stuff
 -
+* Rebuild
+- Redrock library and the redrock-templates directory. Kind of in progress
+
+- Specify file format. DONE
+- Table aesthetics: Include pretty-printed request parameters as well as request time
+- Run more in-depth testing on filters+advanced features.

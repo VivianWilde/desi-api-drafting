@@ -205,9 +205,10 @@ def exec_request(req: ApiRequest) -> Response:
     if mimetype(response_file) == ".html":
         return send_file(response_file)
     else:
+        ext = mimetype(response_file)
         return send_file(
             response_file,
-            download_name=f"desi_api_{req_time.isoformat()}.fits",  # TODO: FIlename may not be fits
+            download_name=f"desi_api_{req_time.isoformat()}.{ext}",  # TODO: FIlename may not be fits
         )
 
 
@@ -262,22 +263,33 @@ def create_zcat_file(
 
     os.makedirs(save_dir, exist_ok=True)
 
-    # TODO figure filetype based on filters
     if response_type == ResponseType.PLOT:
         # We want an html table
         return zcat_to_html(zcat, save_dir, file_name)
     else:
+        filetype = filters.get("filetype", DEFAULT_FILETYPE).lower()
         # Do the complex figuring.
         # For now, just do FITS.
-        target_file = f"{save_dir}/{file_name}.fits"
+        target_file = f"{save_dir}/{file_name}.{filetype}"
         try:
-            fitsio.write(target_file, zcat)
+            write_zcat_to_file(target_file, zcat, filetype)
             return target_file
         except Exception as e:
             raise DesiApiException(
                 "unable to create spectra file - fitsio failed to write to "
                 + target_file
             )
+
+def write_zcat_to_file(target_file: str, zcat: Zcatalog, filetype:str):
+    log("requested filetype: ", filetype)
+    match filetype:
+        case "fits":
+            fitsio.write(target_file, zcat)
+        case "json":
+            with open(target_file, "w") as f:
+                f.write(zcat_to_json_str(zcat))
+        case _:
+            raise DesiApiException("invalid filetype requested")
 
 
 def zcat_to_json_str(zcat: Zcatalog) -> str:

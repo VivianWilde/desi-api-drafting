@@ -213,7 +213,8 @@ def get_target_zcatalog(
 
     # Also read in metadata we want to filter on
     for k in filters.keys():
-        desired_columns.append(k)
+        if k not in SPECIAL_QUERY_PARAMS:
+            desired_columns.append(k)
 
     zcatfile = release.healpix_fits
     log("reading target zcatalog info from: ", zcatfile)
@@ -341,6 +342,9 @@ def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
 
     filtered_keep = np.full(zcatalog.shape, True, dtype=bool)
     for k, v in filters.items():
-        clause = clause_from_filter(k, v, zcatalog)
-        filtered_keep = np.logical_and(filtered_keep, clause)
+        if k in SPECIAL_QUERY_PARAMS:
+            pass
+        else:
+            clause = clause_from_filter(k, v, zcatalog)
+            filtered_keep = np.logical_and(filtered_keep, clause)
     return zcatalog[filtered_keep]

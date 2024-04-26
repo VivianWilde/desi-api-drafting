@@ -104,9 +104,13 @@ Restrictions
 
 # Filtering
 
-Currently the only use for optional query parameters. For filtering, you pass in a column name as the query keys, like "PROGRAM" or "SURVEY", and a string like ">{num}" or "={string}" as the values. For instance you might append `?PROGRAM==dark&SURVEY==main` (the double-equals is intentional - the first is part of the HTML query syntax and the second distinguishes an equality query from a greater than query) to a URL to only select records which satisfy those properties.
+Currently the primary use for optional query parameters. For filtering, you pass in a column name as the query keys, like "PROGRAM" or "SURVEY", and a string like ">{num}" or "={string}" as the values. For instance you might append `?PROGRAM==dark&SURVEY==main` (the double-equals is intentional - the first is part of the HTML query syntax and the second distinguishes an equality query from a greater than query) to a URL to only select records which satisfy those properties.
 
 If you want to include a non-default column in the response data, but don't necessarily want to do any filtering on it, add the filter param with `*` as the value, such as `?PROGRAM=*`.
+
+## Filetypes
+For the `zcat/plot` endpoints, the file that is returned defaults to a FITS file. However, you can add a `?filetype=<type>` query parameter to the request to get the data in a fomat you specify.
+At the moment only FITS and JSON are supported.
 
 # Roadmap
 

@@ -18,6 +18,8 @@ SPECTRO_REDUX = getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
 DEFAULT_CONF = "/config/default.toml"
 USER_CONF = "/config/config.toml"
+DEFAULT_FILETYPE = "fits" # The default filetype for zcat files
+SPECIAL_QUERY_PARAMS = ["filetype"] # Query params that don't correspond to data filters
 
 
 def canonise_release_name(release: str) -> str:
@@ -111,7 +113,7 @@ class ApiRequest:
         :returns:
         """
         return self.replace_for_fitsio(
-            f"{self.requested_data}-{self.response_type}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}"
+            f"{self.requested_data}-{self.response_type}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}-{self.filters}"
         )
 
     @staticmethod
@@ -123,6 +125,8 @@ class ApiRequest:
             .replace(")", "")
             .replace("[", "")
             .replace("]", "")
+            .replace("{","")
+            .replace("}","")
         )
 
     def validate(self) -> bool:
