@@ -304,7 +304,6 @@ def clause_from_filter(key: str, value: str, targets: DataFrame) -> Clause:
 
     """
 
-    # TODO doc
     operator_fns = {
         ">": operator.gt,
         "=": operator.eq,
@@ -321,7 +320,11 @@ def clause_from_filter(key: str, value: str, targets: DataFrame) -> Clause:
     if op == "*":
         value = ""
     else:
-        value = value[1:]  # Actual value. TODO: Handle casting when appropriate
+        value = value[1:]
+        try:
+            value = float(value)
+        except ValueError:
+            pass
 
     return func(targets[key], value)
 

@@ -703,3 +703,7 @@ Desired user-facing format:
 - Specify file format. DONE
 - Table aesthetics: Include pretty-printed request parameters as well as request time
 - Run more in-depth testing on filters+advanced features.
+- TODO: Testing for post requests
+
+What do filters look like?
+PROGRAM=dark and stuff like that

@@ -41,6 +41,7 @@ def test_tile():
     assert sorted(result.fibermap["FIBER"]) == sorted(fibers)
     return result
 
+
 # test_tile()
 
 
@@ -183,15 +184,15 @@ def test_post_targets():
 # Fujilite
 
 fujilite_endpoints = [
-    "spectra/plot/fujilite/radec/210.9,24.8,180", # FIXME
-    "spectra/download/fujilite/radec/210.9,24.8,180", # Works
-    "spectra/plot/fujilite/tile/80858/600,900,1000", # FIXME
+    "spectra/plot/fujilite/radec/210.9,24.8,180",  # FIXME
+    "spectra/download/fujilite/radec/210.9,24.8,180",  # Works
+    "spectra/plot/fujilite/tile/80858/600,900,1000",  # FIXME
     "spectra/download/fujilite/tile/80858/600,900,1000",
-    "spectra/plot/fujilite/targets/39628368387245557,39628368404022902", # Works
-    "spectra/download/fujilite/radec/210.9,24.8,180", # Works
-    "zcat/download/fujilite/radec/210.9,24.8,180", # Works
-    "zcat/download/fujilite/tile/80858/600,900,1000", # Works
-    "zcat/download/fujilite/targets/39628368387245557,39628368404022902", # Works
+    "spectra/plot/fujilite/targets/39628368387245557,39628368404022902",  # Works
+    "spectra/download/fujilite/radec/210.9,24.8,180",  # Works
+    "zcat/download/fujilite/radec/210.9,24.8,180",  # Works
+    "zcat/download/fujilite/tile/80858/600,900,1000",  # Works
+    "zcat/download/fujilite/targets/39628368387245557,39628368404022902",  # Works
 ]
 
 zcat_plot_endpoints = [
@@ -200,20 +201,21 @@ zcat_plot_endpoints = [
     "zcat/plot/fujilite/targets/39628368387245557,39628368404022902",
 ]
 
+filter_endpoints = [
+    "spectra/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
+    "zcat/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
+    "zcat/download/fujilite/tile/80858/600,900,1000?fiber=<950",
+    "zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
+    "zcat/download/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
+]
 
-def test_fujilite():
+
+def test_fujilite(endpoints: List[str]):
     resps = dict()
-    for endpoint in fujilite_endpoints:
+    for endpoint in endpoints:
         resps[endpoint] = test_get(endpoint)
     return resps
     # resps = [test_get(endpoint) for endpoint in fujilite_endpoints]
-
-def test_fujilite_plot():
-
-    resps = dict()
-    for endpoint in zcat_plot_endpoints:
-        resps[endpoint] = test_get(endpoint)
-    return resps
 
 
 def test_fujilite_filegen():
@@ -223,5 +225,6 @@ def test_fujilite_filegen():
     return resps
 
 
-test_fujilite()
-test_fujilite_plot()
+# test_fujilite(fujilite_endpoints)
+# test_fujilite(zcat_plot_endpoints)
+test_fujilite(filter_endpoints)

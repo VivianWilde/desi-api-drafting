@@ -18,7 +18,7 @@ SPECTRO_REDUX = getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
 DEFAULT_CONF = "/config/default.toml"
 USER_CONF = "/config/config.toml"
-DEFAULT_FILETYPE = "fits" # The default filetype for zcat files
+DEFAULT_FILETYPE = "json" # The default filetype for zcat files
 SPECIAL_QUERY_PARAMS = ["filetype"] # Query params that don't correspond to data filters
 
 

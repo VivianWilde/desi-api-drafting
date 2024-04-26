@@ -262,7 +262,6 @@ def create_zcat_file(
     """
 
     os.makedirs(save_dir, exist_ok=True)
-
     if response_type == ResponseType.PLOT:
         # We want an html table
         return zcat_to_html(zcat, save_dir, file_name)
