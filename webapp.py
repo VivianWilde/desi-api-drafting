@@ -20,7 +20,6 @@ from flask import (
     send_file,
 )
 from prospect.viewer import plotspectra
-import pandas as pd
 
 from numpyencoder import NumpyEncoder
 
