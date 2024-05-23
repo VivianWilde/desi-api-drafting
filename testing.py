@@ -1,4 +1,4 @@
-#!/usr/bin/env ptpython
+#!/usr/bin/env python
 import requests
 
 from build_spectra import *
@@ -149,14 +149,13 @@ def test_get(req: str):
     resp = requests.get("http://127.0.0.1:5000/api/v1/" + req)
     print(req)
     print(resp.status_code)
-    # print(resp.content)
     assert resp.status_code == 200
     assert resp.content != ""
     return resp
 
 
 def test_post(req: str, args: dict):
-    resp = requests.post("http://127.0.0.1:5000/api/v1/" + req, data=args)
+    resp = requests.post("http://127.0.0.1:5000/api/v1/post", data=args)
     assert resp.status_code == 200
     assert resp.content != ""
     return resp
@@ -172,9 +171,10 @@ def test_get_tile():
 
 def test_post_targets():
     data = {
-        "response_type": "download",
-        "release": "fuji",
-        "endpoint": "targets",
+        "requested_data": "ZCAT",
+        "response_type": "DOWNLOAD",
+        "release": "fujilite",
+        "endpoint": "TARGETS",
         "params": "39628473198710603,39632946386177593,39632956452508085,39632971434560784",
         "survey": "main",
     }
@@ -202,10 +202,10 @@ zcat_plot_endpoints = [
 ]
 
 filter_endpoints = [
-    "spectra/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
+    # "spectra/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
     "zcat/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
     "zcat/download/fujilite/tile/80858/600,900,1000?fiber=<950",
-    "zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
+    # "zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
     "zcat/download/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
 ]
 
@@ -225,6 +225,7 @@ def test_fujilite_filegen():
     return resps
 
 
-# test_fujilite(fujilite_endpoints)
-# test_fujilite(zcat_plot_endpoints)
+test_fujilite(fujilite_endpoints)
+test_fujilite(zcat_plot_endpoints)
 test_fujilite(filter_endpoints)
+# test_post_targets()

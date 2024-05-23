@@ -124,8 +124,8 @@ release: <name of desi data release to query>
 endpoint: <tile/target/radec>
 params: {}
 }
-```
-The next step is to make the params object be its own dictionary rather than a string, for more readable and sensible-looking post requestions
+
+
 
 ## Optional Query Params
 One thing in the pipeline is allowing you to specify the file type of downloads for `zcat/download` endpoints, to get the metadata in a variety of formats, such as JSON, CSV, etc. Currently only FITS is supported

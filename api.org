@@ -684,7 +684,6 @@ Desired user-facing format:
 ~python3 run.py <command> --config-file <file> --<public/private>~
 
 
-
 * Documentation TODOs
 - Update endpoint userdocs, including docs on filters
 - Docs on config file
@@ -708,8 +707,8 @@ Desired user-facing format:
 What do filters look like?
 PROGRAM=dark and stuff like that
 * TODO
-- Set up a new desi-api venv, with everything from main, try to reproduce the keyerror QSO problem.
-- Keep notes on how the env was constructed.
+# - Set up a new desi-api venv, with everything from main, try to reproduce the keyerror QSO problem.
+# - Keep notes on how the env was constructed.
 - Abbreviated overview+userdoc presentation
 - Demo: Toy examples for people to get started with.
 - DONE dry-run opt for run.py, so it justs print the command.
@@ -729,7 +728,18 @@ python -m pip install --no-deps git+https://github.com/desihub/redrock
 
 git clone https://github.com/desihub/redrock-templates ~/d/urap/libs/new-rr-templates
 
-curl  https://raw.githubusercontent.com/desihub/redrock-templates/0.7.2/rrtemplate-qso.fits -o ~/d/urap/libs/new-rr-templates/rrtemplate-QSO.fits
+curl  https://raw.githubusercontent.com/desihub/redrock-templates/0.7.2/rrtemplate-qso.fits -o ~/d/urap/libs/new-rr-templates/rrtemplate-qso.fits
 
-env RR_TEMPLATE_DIR="~/d/urap/libs/new-rr-templates"
+env RR_TEMPLATE_DIR=~/d/urap/libs/new-rr-templates
 #+end_src
+* Table template stuff
+Header string:
+
+Endpoint, params, filters
+* Python API
+- Basically a wrapper around webapp and build spectra
+- Abstractly, if the error happens at the looking-for-data layer, we should ping the API, otherwise just report err to user
+- Basic idea: Different layers
+- Ideal: If we have to ping the server, we notify the user that we did this.
+- TODO: API design. Basically, zcat_radec, zcat_target, spectra_radec, spectra_target
+- HW: API design doc, with the URL \to func mapping established

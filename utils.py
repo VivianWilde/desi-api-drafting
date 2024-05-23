@@ -18,7 +18,7 @@ def filename(path: str) -> str:
 
 def basename(path: str):
     """Return the file name without extension or path info"""
-    return os.path.splitext(path)[0]
+    return os.path.splitext(path)[0].split(".")[0]
 
 
 def build_list_parser(func: Callable[[str], Any]) -> Callable[[str], List[Any]]:

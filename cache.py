@@ -1,11 +1,13 @@
 #!/usr/bin/env ipython3
-from desispec.io.util import subprocess
 from models import *
 from utils import *
 import shutil
+import subprocess
 
 
-def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict) -> str|None:
+def check_cache(
+    req: ApiRequest, request_time: dt.datetime, cache_path: str, max_age: int
+) -> str | None:
     """Check whether a suitably recent response to the current request exists in the cache, if it does then return that file, else return None
 
     :param req:
@@ -15,7 +17,7 @@ def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict) 
 
     """
 
-    cache_path = f"{cache_config['path']}/{req.get_cache_path()}"
+    cache_path = f"{cache_path}/{req.get_cache_path()}"
     if os.path.isdir(cache_path):
         cached_responses = os.listdir(cache_path)
         most_recent = (
@@ -28,7 +30,8 @@ def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict) 
         log("recent", basename(most_recent))
         age = request_time - dt.datetime.fromisoformat(basename(most_recent))
         log("age", age)
-        if age < dt.timedelta(minutes=cache_config["max_age"]):
+        # max_age==0 means never to consider the cache stale
+        if max_age==0 or age < dt.timedelta(minutes=max_age):
             log("using cache")
             return os.path.join(cache_path, most_recent)
         else:
@@ -36,28 +39,28 @@ def check_cache(req: ApiRequest, request_time: dt.datetime, cache_config: dict) 
             return None
 
 
-def clean_cache(cache_config: dict):
+def clean_cache(cache_path: str, max_age: int):
     """Run somewhat frequently (on the order of hours/days), delete files with sufficiently old access times (cutoff is determined by the value in CACHE_CONFIG)
 
     :returns:
 
     """
-    for root, dirs, files in os.walk(cache_config["path"]):
+    for root, dirs, files in os.walk(cache_path):
         for f in files:
             fullpath = f"{root}/{f}"
             atime = dt.datetime.fromtimestamp(os.path.getatime(fullpath))
             cutoff = dt.datetime.now() - atime
-            if cutoff < cache_config["max_age"]:
+            if cutoff < dt.timedelta(minutes=max_age):
                 os.remove(fullpath)
 
 
-def emergency_clean_cache(cache_config: dict):
+def emergency_clean_cache(cache_path: str, max_size: str):
     """Run approximately every hour. If the cache directory is beyond a certain size, defined in CACHE_CONFIG, nuke it."""
-    cmd = f"du -s {cache_config['path']}"
+    cmd = f"du -s {cache_path}"
     out = subprocess.getoutput(cmd)
     size_bytes = int(out.split()[0])
-    if size_bytes >= cache_config["max_size"]:
-        shutil.rmtree(cache_config["path"])
+    if size_bytes >= get_max_cache_size(max_size):
+        shutil.rmtree(cache_path)
 
 
 # We want this to run as cron/scheduler/whatever. How do we do that?

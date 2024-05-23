@@ -1,25 +1,35 @@
 #!/usr/bin/env ipython3
 from os import getenv
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from enum import Enum
 from typing import List, Mapping, Tuple
 
 from numpy import ndarray
+
+from errors import MalformedRequestException
+
+from astropy.table import Table
+
+
+from desispec.spectra import Spectra as DesiSpectra
 
 
 # Type aliases my beloved
 DataFrame = ndarray
 Target = DataFrame
 Filter = Mapping[str, str]
-Zcatalog = DataFrame
-Clause = List[bool] # A boolean mask, used in filtering Zcatalogs
+Zcatalog = Table
+Clause = List[bool]  # A boolean mask, used in filtering Zcatalogs
+Spectra = DesiSpectra
 
 SPECTRO_REDUX = getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
 DEFAULT_CONF = "/config/default.toml"
 USER_CONF = "/config/config.toml"
-DEFAULT_FILETYPE = "json" # The default filetype for zcat files
-SPECIAL_QUERY_PARAMS = ["filetype"] # Query params that don't correspond to data filters
+DEFAULT_FILETYPE = "fits"  # The default filetype for zcat files
+SPECIAL_QUERY_PARAMS = [
+    "filetype"
+]  # Query params that don't correspond to data filters
 
 
 def canonise_release_name(release: str) -> str:
@@ -37,17 +47,24 @@ def canonise_release_name(release: str) -> str:
         return release
     if release in translations.keys():
         return translations[release]
-    raise DesiApiException(f"release must be one of FUJI or IRON, not {release}")
-
-
-class DesiApiException(Exception):
-    pass
+    raise MalformedRequestException(
+        f"release must be one of FUJI or IRON, not {release}"
+    )
 
 
 class RequestedData(Enum):
     UNSPECIFIED = 0
     ZCAT = 1
     SPECTRA = 2
+
+    def __str__(self) -> str:
+        match self:
+            case RequestedData.ZCAT:
+                return "zcat"
+            case RequestedData.SPECTRA:
+                return "spectra"
+            case _:
+                return "???"
 
 
 class ResponseType(Enum):
@@ -63,6 +80,7 @@ class Endpoint(Enum):
     RADEC = 3
 
 
+@dataclass
 class Parameters:
     @property
     def canonical(self) -> Tuple:
@@ -79,6 +97,11 @@ class RadecParameters(Parameters):
     def canonical(self) -> Tuple:
         return (self.ra, self.dec, self.radius)
 
+    def __str__(self) -> str:
+        return str(
+            {"Right Ascension": self.ra, "Declination": self.dec, "Radius": self.radius}
+        )
+
 
 @dataclass
 class TileParameters(Parameters):
@@ -89,6 +112,9 @@ class TileParameters(Parameters):
     def canonical(self) -> Tuple:
         return (self.tile, sorted(self.fibers))
 
+    def __str__(self) -> str:
+        return str({"Tile ID": self.tile, "Fibers": sorted(self.fibers)})
+
 
 @dataclass
 class TargetParameters(Parameters):
@@ -97,6 +123,9 @@ class TargetParameters(Parameters):
     @property
     def canonical(self) -> Tuple:
         return tuple(sorted(self.target_ids))
+
+    def __str__(self) -> str:
+        return str({"Target IDs": sorted(self.target_ids)})
 
 
 @dataclass()
@@ -113,7 +142,7 @@ class ApiRequest:
         :returns:
         """
         return self.replace_for_fitsio(
-            f"{self.requested_data}-{self.response_type}-{canonise_release_name(self.release)}-{self.endpoint}-params-{self.params.canonical}-{self.filters}"
+            f"{self.requested_data.name}-{self.response_type.name}-{canonise_release_name(self.release)}-{self.endpoint.name}-params-{self.params.canonical}-{self.filters}"
         )
 
     @staticmethod
@@ -125,12 +154,37 @@ class ApiRequest:
             .replace(")", "")
             .replace("[", "")
             .replace("]", "")
-            .replace("{","")
-            .replace("}","")
+            .replace("{", "")
+            .replace("}", "")
         )
 
     def validate(self) -> bool:
         return True
+
+    def __str__(self) -> str:
+        return f"""
+
+        Requested Data: {self.requested_data.name.capitalize()}
+
+        Response Type: {self.response_type.name.capitalize()}
+
+        Endpoint: {self.endpoint.name.capitalize()}
+
+        Parameters: {self.params}
+
+        Filters: {self.filters}
+        """
+
+    def to_post_payload(self) -> dict:
+        payload = {
+            "requested_data": self.requested_data.name,
+            "response_type": self.response_type.name,
+            "release": self.release,
+            "endpoint": self.endpoint.name,
+            "params": asdict(self.params),
+        }
+        payload.update(self.filters)
+        return payload
 
 
 @dataclass
