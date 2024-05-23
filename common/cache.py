@@ -1,6 +1,6 @@
 #!/usr/bin/env ipython3
-from models import *
-from utils import *
+from .models import *
+from .utils import *
 import shutil
 import subprocess
 

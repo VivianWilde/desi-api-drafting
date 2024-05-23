@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import requests
 
-from build_spectra import *
-from models import *
-from webapp import test_file_gen
+from ..common.build_spectra import *
+from ..common.models import *
+from .webapp import test_file_gen
 
 # Build_spectra tests: Test it gets the right data in our internal python format
 

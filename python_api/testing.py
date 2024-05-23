@@ -1,4 +1,4 @@
-from api import *
+from .api import *
 
 client = DesiApiClient(release="fujilite")
 responses = [

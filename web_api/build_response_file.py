@@ -10,11 +10,11 @@ from flask import render_template
 from numpyencoder import NumpyEncoder
 from prospect.viewer import plotspectra
 
-import build_spectra
-from cache import check_cache
-from errors import MalformedRequestException, ServerFailedException
-from models import *
-from utils import *
+from ..common.build_spectra import handle_spectra, handle_zcatalog
+from ..common.cache import check_cache
+from ..common.errors import MalformedRequestException, ServerFailedException
+from ..common.models import *
+from ..common.utils import *
 
 
 def build_response(
@@ -32,13 +32,13 @@ def build_response(
     cache_path = f"{cache_root}/{req.get_cache_path()}"
 
     if req.requested_data == RequestedData.SPECTRA:
-        spectra = build_spectra.handle_spectra(req)
+        spectra = handle_spectra(req)
         resp_file_path = create_spectra_file(
             req.response_type, spectra, cache_path, request_time.isoformat()
         )
         return resp_file_path
     else:
-        zcatalog = build_spectra.handle_zcatalog(
+        zcatalog = handle_zcatalog(
             req
         )  # object returned by fitsio.read + slicing/dicing
         resp_file_path = create_zcat_file(

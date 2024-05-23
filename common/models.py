@@ -6,7 +6,7 @@ from typing import List, Mapping, Tuple
 
 from numpy import ndarray
 
-from errors import MalformedRequestException
+from .errors import MalformedRequestException
 
 from astropy.table import Table
 

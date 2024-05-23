@@ -1,9 +1,8 @@
-from build_spectra import handle_spectra, handle_zcatalog
-from cache import check_cache
-from errors import DataNotFoundException, DesiApiException
+from ..common.build_spectra import handle_spectra, handle_zcatalog
+from ..common.cache import check_cache
+from ..common.errors import DataNotFoundException, DesiApiException
 from typing import List
-from models import *
-from response_file_gen import build_response
+from ..common.models import *
 from desispec.io import read_spectra
 
 import datetime, requests, os

@@ -1,11 +1,9 @@
 #!/usr/bin/env ipython3
 
 import argparse
-
-import cache
-import utils
-import webapp
-from models import DEFAULT_CONF
+from ..common import cache, utils
+from ..common.models import DEFAULT_CONF
+from .webapp import run_app
 
 parser = argparse.ArgumentParser(prog="DESI API")
 
@@ -22,11 +20,11 @@ def main():
     args = parser.parse_intermixed_args()
     config = utils.get_config_map(args.config_file)
     if args.command == "server":
-        webapp.run_app(config)
+        run_app(config)
     elif args.command == "clean_cache":
-        cache.clean_cache(config["cache"])
+        cache.clean_cache(config["cache"]["path"],config["cache"]["max_age"])
     elif args.command == "emergency_clean_cache":
-        cache.emergency_clean_cache(config["cache"])
+        cache.emergency_clean_cache(config["cache"]["path"],config["cache"]["max_size"])
 
 
 if __name__ == "__main__":

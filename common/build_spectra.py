@@ -5,13 +5,13 @@ from typing import List, Tuple
 
 import desispec.io
 import desispec.spectra
-from errors import DataNotFoundException, MalformedRequestException
 import fitsio
 import numpy as np
 from astropy.table import Table
 
-from models import *
-from utils import log
+from .models import *
+from .utils import log
+from .errors import DataNotFoundException, MalformedRequestException
 
 # Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.

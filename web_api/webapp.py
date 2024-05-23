@@ -6,13 +6,14 @@ from typing import List
 
 from flask import Flask, Response, abort, redirect, request, send_file
 
-from errors import DesiApiException, MalformedRequestException
-from models import *
-from utils import *
-import response_file_gen
+from ..common.errors import DesiApiException, MalformedRequestException
+from ..common.models import *
+from ..common.utils import *
+from .build_response_file import build_response
 
 DEBUG = True
-app = Flask("DESI API Server")
+TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
+app = Flask("DESI API Server", template_folder=TEMPLATE_DIR)
 # app.config.from_object(__name__)
 
 DOC_URL = "https://github.com/VivianWilde/desi-api-drafting/blob/main/userdoc.org"
@@ -180,7 +181,7 @@ def exec_request(req: ApiRequest) -> Response:
     """
     req_time = dt.datetime.now()
     log("request: ", req)
-    response_file = response_file_gen.build_response(
+    response_file = build_response(
         req,
         req_time,
         cache_root=app.config["cache"]["path"],
