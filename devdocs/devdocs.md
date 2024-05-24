@@ -4,7 +4,7 @@ author: Vivien Goyal
 
 # Introduction
 
-The quickest way to get started with running the server raw (i.e not through a docker container) is to run `python cli.py server -c docker-utilities/config.toml`, which uses a prewritten config file and starts a webserver.
+The quickest way to get started with running the server raw (i.e not through a docker container) is to run `python -m desi_api.web_api.cli server -c docker_utilities/config.toml`, which uses a prewritten config file and starts a webserver.
 
 # Configuration
 The file `default.toml` defines the basic configuration options along with default values for when running the program inside a Docker container, commented with annotations.
@@ -44,49 +44,68 @@ For instance `python run.py server -c ./config.toml -m public` to run a server t
 
 # Module Structure
 
-## Models.py
+## Web Api
+### `cli`
+
+The top-level wrapper, that delegates to either running the server (as defined in `webapp`) or a particular cache clean routine (one of those defined in `cache`)
+It reads the specified config file, and updates the app's internal config map with that data before running it.
+
+### `webapp`
+Treats `build_response_file` as a black box.
+
+Responsible for the infrastructure around requests to `build_response_file`:
+
+- Interpreting/parsing API requests
+- Validating API requests
+- Calling `build_response_file`, and sending the response back to the user over the network
+
+### `build_response_file`
+- Cache handling - saving responses to cache, and using cached responses if they exist.
+- Given a request, either:
+  - Find a response file in the cache and return it.
+  - Call `build_spectra` to get response data (Zcatalog or Spectra data) and transform the data into the requested file.
+- Then save the file to the cache and report the path.
+
+## Python_Api
+This module provides python functions that map one-to-one to the API endpoints. When called, the function first looks in `$DESI_SPECTRO_REDUX` for the data it needs, if that fails it makes a query to the web server.
+Either way, the functions return an internal python object, namely either a `desispec.Spectra` or an `astropy.table.Table` (for Zcatalog metadata).
+### Implementation
+Provides a class `DesiApiClient()` which essentially stores reusable configuration info like the base URL for the API server. The user-facing functions have the same pattern of constructing an `ApiRequest` based on the arguments passed to them, and then delegating to `get_data_with_fallback` to handle that request. 
+`get_data_with_fallback` in turn tries to build the response object locally, and if that fails due to missing data it requests the file via the web API, caches it locally, and reads a python object from the file.
+
+## Common
+Stores the shared logic and data structures that both the web and python APIs rely on
+### Models.py
+TODO
+
 Defines the basic structures, models, and types we use.
 
-### Types
-### DataRelease
-### ApiRequest
-### Parameters
+#### Types
+
+#### DataRelease
+
+#### ApiRequest
+
+#### Parameters
 
 
+### Build_Spectra.py
 
-## Build_Spectra.py
 - Interacts with the DESI data, and reads data from the DESI filesystem into a internal format (`desispec.Spectra` objects for spectra, and just general `numpy.ndarray`s for Zcatalog/metadata)
 - Top level functions have the form `handle_<thing>`. Currently we have `handle_spectra` and `handle_zcat`, which function as black boxes that take in `ApiRequest` objects and give out responses.
 - Endpoint-specific functions have the form `get_<endpoint>_<response_type>`, for instance `get_tile_zcat` or `get_target_spectra`. These are where the main interaction with the DESI data model happens
 - The rest are helper functions, or functions that help with [filtering](#filtering)
 
-### Useful Functions
-Some functions in `build_spectra` are generic enough to be reusable outside the context of this program.
-TODO: List them, and include their docstrings here.
+### Cache.py
 
-
-## Cache.py
 Defines functions that take in some cache configuration (taken from the `[cache]` section of the config file) and interact with the cache director in some way.
 
 - `check_cache` :: Check if a specified request has a sufficiently recent response in the cache and return it if it does
 - `clean_cache` :: Remove files that haven't been accessed for a long time, as defined by the cache configuration
 - `emergency_clean_cache` :: Run quite frequently, check if the cache exceeds a certain predefined size limit and remove all the contents if it does.
 
-## Webapp.py
-Treats `build_spectra` and `cache` as black boxes.
-
-Responsible for the infrastructure around requests to `build_spectra`:
-
-- Interpreting/parsing API requests
-- Validating API requests
-- Cache handling - saving responses to cache, and using cached responses if they exist.
-- Turning response data into files, either data files or HTML displays.
-
-## Cli.py
-The top-level wrapper, that delegates to either running the server (as defined in `webapp`) or a particular cache clean routine (one of those defined in `cache`)
-It reads the specified config file, and updates the app's internal config map with that data before running it.
-
-
+### Utils.py
+A motley collection of general-purpose utilities like small parsers/translators.
 
 # Feature Implementation Details
 

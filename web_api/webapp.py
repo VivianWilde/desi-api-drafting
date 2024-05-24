@@ -239,7 +239,7 @@ def build_params_from_dict(endpoint: Endpoint, params: dict) -> Parameters:
             return TargetParameters(parse_list_int(params["target_ids"]))
         elif endpoint == Endpoint.TILE:
             return TileParameters(
-                int(params["tile_id"]), parse_list_int(params["fiber_ids"])
+                int(params["tile"]), parse_list_int(params["fibers"])
             )
     except:
         raise MalformedRequestException(f"invalid endpoint parameters for {endpoint}")

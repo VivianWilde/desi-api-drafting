@@ -16,6 +16,7 @@ def default_cache_dir() -> str:
 def default_release():
     return "fuji"
     # TODO if running at NERSC, use the latest private, else latest public
+    # TODO: Needs to be future compatible
 
 
 DEFAULT_SERVER = "http://0.0.0:5000"  # possibly change this
