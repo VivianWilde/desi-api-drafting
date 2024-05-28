@@ -5,6 +5,7 @@ import json
 from typing import List
 
 from flask import Flask, Response, abort, redirect, request, send_file
+from json import loads
 
 from ..common.errors import DesiApiException, MalformedRequestException
 from ..common.models import *
@@ -70,9 +71,10 @@ def handle_post():
 
     """
     # TODO: Handle sensible ways to do paths for params, so no <tileid>/<fiberids>
-    data = request.form
+    data = loads(request.json)
     log("request: ", data)
-    param_keys = ["requested_data" "response_type", "release", "endpoint", "params"]
+    log("params: ", data["params"])
+    param_keys = ["requested_data", "response_type", "release", "endpoint", "params"]
     filters = {k: v for (k, v) in data.items() if k not in param_keys}
     try:
         # TODO data re
@@ -236,11 +238,9 @@ def build_params_from_dict(endpoint: Endpoint, params: dict) -> Parameters:
             ra, dec, radius = [float(params[key]) for key in ["ra", "dec", "radius"]]
             return RadecParameters(ra, dec, radius)
         elif endpoint == Endpoint.TARGETS:
-            return TargetParameters(parse_list_int(params["target_ids"]))
+            return TargetParameters(params["target_ids"])
         elif endpoint == Endpoint.TILE:
-            return TileParameters(
-                int(params["tile"]), parse_list_int(params["fibers"])
-            )
+            return TileParameters(int(params["tile"]), params["fibers"])
     except:
         raise MalformedRequestException(f"invalid endpoint parameters for {endpoint}")
 

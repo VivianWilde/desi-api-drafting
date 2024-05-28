@@ -95,11 +95,15 @@ class RadecParameters(Parameters):
 
     @property
     def canonical(self) -> Tuple:
-        return (self.ra, self.dec, self.radius)
+        return (float(self.ra), float(self.dec), float(self.radius))
 
     def __str__(self) -> str:
         return str(
-            {"Right Ascension": self.ra, "Declination": self.dec, "Radius": self.radius}
+            {
+                "Right Ascension": float(self.ra),
+                "Declination": float(self.dec),
+                "Radius": float(self.radius),
+            }
         )
 
 

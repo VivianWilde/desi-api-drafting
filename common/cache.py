@@ -30,8 +30,9 @@ def check_cache(
         log("recent", basename(most_recent))
         age = request_time - dt.datetime.fromisoformat(basename(most_recent))
         log("age", age)
+        log("max age:", max_age)
         # max_age==0 means never to consider the cache stale
-        if max_age==0 or age < dt.timedelta(minutes=max_age):
+        if max_age == 0 or age < dt.timedelta(minutes=max_age):
             log("using cache")
             return os.path.join(cache_path, most_recent)
         else:

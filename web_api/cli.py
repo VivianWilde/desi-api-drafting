@@ -22,9 +22,11 @@ def main():
     if args.command == "server":
         run_app(config)
     elif args.command == "clean_cache":
-        cache.clean_cache(config["cache"]["path"],config["cache"]["max_age"])
+        cache.clean_cache(config["cache"]["path"], config["cache"]["max_age"])
     elif args.command == "emergency_clean_cache":
-        cache.emergency_clean_cache(config["cache"]["path"],config["cache"]["max_size"])
+        cache.emergency_clean_cache(
+            config["cache"]["path"], config["cache"]["max_size"]
+        )
 
 
 if __name__ == "__main__":
