@@ -119,7 +119,7 @@ Instead of returning files, functions in the API return python objects. Spectra 
 The functions search for data locally if `$DESI_SPECTRO_REDUX` is set.
 If a function fails to find data locally, it retrieves and caches a file from the server via the web API, and then reads a python object from that file.
 ## How to Import
-`from desi_api.python_api.api import get_zcat_radec` (or whatever function you may want).
+`from desi_api.python.api import get_zcat_radec` (or whatever function you may want).
 
 ## Usage
 In most cases, simply running the function with the required arguments will get you what you need. Filters are specified as a dictionary. For instance `{"program":"dark","fiber":">100"}` would be a valid filter.

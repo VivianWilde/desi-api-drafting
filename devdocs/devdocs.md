@@ -4,7 +4,7 @@ author: Vivien Goyal
 
 # Introduction
 
-The quickest way to get started with running the server raw (i.e not through a docker container) is to run `python -m desi_api.web_api.cli server -c docker_utilities/config.toml`, which uses a prewritten config file and starts a webserver.
+The quickest way to get started with running the server raw (i.e not through a docker container) is to run `python -m desi_api.web.cli server -c docker_utilities/config.toml`, which uses a prewritten config file and starts a webserver.
 
 # Configuration
 The file `default.toml` defines the basic configuration options along with default values for when running the program inside a Docker container, commented with annotations.
@@ -45,29 +45,29 @@ TODO
 
 # Module Structure
 
-## Web Api
+## Web
 ### `cli`
 
 The top-level wrapper, that delegates to either running the server (as defined in `webapp`) or a particular cache clean routine (one of those defined in `cache`)
 It reads the specified config file, and updates the app's internal config map with that data before running it.
 
-### `webapp`
-Treats `build_response_file` as a black box.
+### `server`
+Treats `response_file` as a black box.
 
-Responsible for the infrastructure around requests to `build_response_file`:
+Responsible for the infrastructure around requests to `response_file`:
 
 - Interpreting/parsing API requests
 - Validating API requests
-- Calling `build_response_file`, and sending the response back to the user over the network
+- Calling `response_file`, and sending the response back to the user over the network
 
-### `build_response_file`
+### `response_file`
 - Cache handling - saving responses to cache, and using cached responses if they exist.
 - Given a request, either:
   - Find a response file in the cache and return it.
   - Call `build_spectra` to get response data (Zcatalog or Spectra data) and transform the data into the requested file.
 - Then save the file to the cache and report the path.
 
-## Python_Api
+## Python
 This module provides python functions that map one-to-one to the API endpoints. When called, the function first looks in `$DESI_SPECTRO_REDUX` for the data it needs, if that fails it makes a query to the web server.
 Either way, the functions return an internal python object, namely either a `desispec.Spectra` or an `astropy.table.Table` (for Zcatalog metadata).
 ### Implementation
