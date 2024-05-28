@@ -27,4 +27,4 @@ VOLUME /cache
 # Crontab TODO
 
 # ENTRYPOINT cd $DESI_ROOT/code/desi-api-drafting && python cli.py
-ENTRYPOINT python -m desi_api.web_api.cli $@
+ENTRYPOINT python -m desi_api.web.cli $@

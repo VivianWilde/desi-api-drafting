@@ -10,6 +10,15 @@ The quickest way to get started with running the server raw (i.e not through a d
 The file `default.toml` defines the basic configuration options along with default values for when running the program inside a Docker container, commented with annotations.
 Simply copy that to a new file and pass the name to the `-c` parameter to run the server with the new configuration (such as if you want to use a different cache directory, or a smaller/larger cache)
 
+# Autodoc Generation
+To generate the Sphinx HTML documentation for this project
+```
+sphinx-apidoc -o docs/auto .
+cd docs/auto
+make html
+```
+The resulting docs will be in `docs/auto/_build/html` (start browing from `index.html`)
+
 # Docker Setup
 Running the docker container correctly is a little tricky, since generating the right options to mount the DESI data we need is finnicky. Because I like you and do not want you to suffer, I've constructed a `run.py` file. Once you've locally built/downloaded the container, simply run `python run.py` and specify:
 1. A command
