@@ -37,6 +37,7 @@ For instance `python run.py server -c ./config.toml -m public` to run a server t
 - DataTables :: HTML+JS library for plotting interactive tables from JSON data, used for the `zcat/plot` endpoint.
 
 # Core Abstractions
+TODO
 ## ZCatalogs
 ## Spectra
 ## ApiRequest

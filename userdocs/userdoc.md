@@ -11,63 +11,51 @@ The API allows you to programatically query data from the DESI project (<https:/
 
 ## Tile
 
-Explanation
-: Given a tile ID and a list of fiber IDs for fibers on that tile,
-retrieve spectra for each of the specified fibers.
+Explanation : Given a tile ID and a list of fiber IDs for fibers on that tile, retrieve spectra for each of the specified fibers.
 
 Arguments: `tile: int, fibers: List[int]`
 
-Syntax
-: `/api/v1/<response_type>/<release>/tile/<tile>/<fiber_1,fiber_2...>`
+Syntax : `/api/v1/<response_type>/<release>/tile/<tile>/<fiber_1,fiber_2...>`
 
-Example
-: `/api/v1/plot/fuji/tile/80605/10,234,2761,3951` would
-read the spectra from fibers `10, 234, 2761` and
-`3951` on tile `80605` and return a
-corresponding HTML plot.
+Example : `/api/v1/plot/fuji/tile/80605/10,234,2761,3951` would read the spectra from fibers `10, 234, 2761` and `3951` on tile `80605` and return a corresponding HTML plot.
 
-Restrictions
-: You can request at most `500` fiber IDs in a single
-`plot` request, and `5000` for a
-`download` request.
+Restrictions : You can request at most `500` fiber IDs in a single `plot` request, and `5000` for a `download` request.
 
 ## Targets
 
-Explanation
-: Given a list of target IDs retrieve spectra for each of those
-targets, where target IDs are positive integers.
+Explanation : Given a list of target IDs retrieve spectra for each of those targets, where target IDs are positive integers.
 
 Arguments: `target_ids: List[int] `
 
-Syntax
-: `/api/v1/<response_type>/<release>/targets/<targetid_1,targetid_2...>`
+Syntax : `/api/v1/<response_type>/<release>/targets/<targetid_1,targetid_2...>`
 
-Example
-: `/api/v1/plot/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784`
+Example : `/api/v1/plot/fuji/targets/39628473198710603,39632946386177593,39632956452508085,39632971434560784`
 
-Restrictions
-: You can request at most `500` target IDs in a single
-`plot` request, and `5000` for a
-`download` request.
+Restrictions : You can request at most `500` target IDs in a single `plot` request, and `5000` for a `download` request.
 
 ## Ra-Dec
 
-Explanation
-: Given a point on the sky in `(right ascension, declination)` coordinates and a `radius` in arcsceconds, retrieve the spectra for all objects within `radius` of the point.
+Explanation : Given a point on the sky in `(right ascension, declination)` coordinates and a `radius` in arcsceconds, retrieve the spectra for all objects within `radius` of the point.
 
 Arguments: `ra: float, dec: float, radius: float`
 
-Syntax
-: `/api/v1/<response_type>/<release>/radec/<ra>,<dec>,<radius>`
+Syntax : `/api/v1/<response_type>/<release>/radec/<ra>,<dec>,<radius>`
 
-Example
-: `/api/v1/plot/fuji/radec/23.7649,29.8324,15`
+Example : `/api/v1/plot/fuji/radec/23.7649,29.8324,15`
 
-Restrictions
-: The radius can be at most `60` arcsceconds.
+Restrictions : The radius can be at most `60` arcsceconds.
 
 # ZCatalog vs Spectra
-TODO
+There are two kinds of data that the API can return.
+## Zcatalog (Metadata)
+The underlying python object is `astropy.table.Table`.
+Metadata on the targets that match the request, such as:
+* Target ID
+* Target location (in the form of `ra` and `dec`)
+* Survey and Program the target belongs to.
+## Spectra (Spectrographic Data)
+The underlying python object is `desispec.spectra.Spectra`. Just records of the observed spectrographic data for targets that match the request.
+
 
 # Filtering
 
@@ -77,7 +65,7 @@ If you want to include a non-default column in the response data, but don't nece
 
 ## Filetypes
 For the `zcat/download` endpoints in the web app, the file that is returned defaults to a FITS file. However, you can add a `?filetype=<type>` query parameter to the request to get the data in a fomat you specify.
-At the moment only FITS and JSON are supported.
+At the moment only FITS and JSON are supported, we plan to add support for CSV and other files soon.
 
 # Web API
 The web app exposes an API to request either the raw data or visualisations of it.
@@ -89,19 +77,15 @@ The basic format for a URL to send the request to is `<host>/api/v1/<requested_d
 
 ### Requested Data
 
-`zcat`
-: The server will respond with a table of targets (with their metadata) that meet the specified criteria.
+`zcat` : The server will respond with a table of targets (with their metadata) that meet the specified criteria.
 
-`spectra`
-: The server will respond with the spectra data for the targets that meet the criteria
+`spectra` : The server will respond with the spectra data for the targets that meet the criteria
 
 ### Response Type
 
-`download`
-: The server will give you back a file containing the spectra you requested - for Spectra endpoints this will always be a FITS file, for Zcat endpoints you can specify the filetype (the options are listed under the _Filtering_ section).
+`download` : The server will give you back a file containing the spectra you requested - for Spectra endpoints this will always be a FITS file, for Zcat endpoints you can specify the filetype (the options are listed under the _Filtering_ section).
 
-`plot`
-: The server will render an HTML page with a visualisation of the data you requested - either a table of target data, or an interactive plot of the spectra you requested.
+`plot` : The server will render an HTML page with a visualisation of the data you requested - either a table of target data, or an interactive plot of the spectra you requested.
 
 ### Release
 
@@ -110,7 +94,7 @@ The data release/production run within which to search. Valid (public) releases 
 ### Endpoint
 
 The possible endpoints, and the structure of the parameters for each of
-them, is explained in [1](#*Endpoints)
+them, is explained in [Endpoints](#Endpoints)
 
 ### Optional Query Parameters
 
@@ -140,7 +124,7 @@ If a function fails to find data locally, it retrieves and caches a file from th
 ## Usage
 In most cases, simply running the function with the required arguments will get you what you need. Filters are specified as a dictionary. For instance `{"program":"dark","fiber":">100"}` would be a valid filter.
 
-The only non-obvious argument is the `release` parameter. TODO explain this.
+The only non-obvious argument is the `release` parameter. Meaning and possible values are explained in [Release](#Release)
 ### `DesiApiClient` Class
 For more fine-grained control over the inner workings of the library, such as cache configuration, you can create an instance of the `DesiApiClient` class. The class essentially holds configuration variables which are used by its class methods. For instance,
 ```python
