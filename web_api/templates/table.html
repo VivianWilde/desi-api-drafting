@@ -17,8 +17,20 @@
 
 
 
-{% block table %}
 <body>
+
+{% block header_string %}
+<h1>
+  DESI API Response
+</h1>
+
+<pre>
+{{ request.__str__()  }}
+</pre>
+{% endblock %}
+
+
+{% block table %}
 <table id="table" class="display table table-striped" style="width:100%">
         <thead>
             <tr>

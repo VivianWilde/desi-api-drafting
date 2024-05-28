@@ -1,0 +1,65 @@
+* DESI Python API
+** DONE Endpoints/User-facing Functions
+For now, different funcs for each (resptype, endpoint) pair. Eg: zcat/radec, zcat/target, plot/target
+
+Try to make them all reuse the same internal logic.
+
+
+
+
+** DONE Internal Design
+*** Endpoint func template (zcat/radec is reference)
+- req = build_request_radec(args)
+- req.RespType = zcat
+
+(Fold all this into a generic megafunction and call that)
+- resp = build_response(req) # This also checks the cache
+- Hopefully we have a response file cached on disk, and we know the path.
+- catch DataMissingError:
+  - Call generic =fallback_to_api= func
+
+**** FallbackToAPI
+- Call a generic function to turn the ApiRequest into a url endpoint
+- Or into a dictionary for a post request because we can do that now!
+- TODO somehow figure out the base address of the API. Config option, or env var, or hardcode.
+- Hit that endpoint
+- The response is a file: html/fits/???. Store it in the cache dir under the name we would have done if the local run worked, return the path
+- Now we almost certainly have a response file cached on disk, and we know the path.
+
+*** TODO Sending filters and nonstandard arguments
+For filters, use a kwargs
+Nonstandard args are stuff like file format. How to capture those?
+Hacky way: Have file_format be an arg on all zcat endpoints.
+Is there a better way?... Not really.
+
+For filters: We can literally just take the kwargs and shove them in
+
+** DONE Revamping Error Handling
+Define new errors, subclasses of DesiApiException.
+Such as DataNotFoundException, MalformedRequestException, ValidationFailedException,  WebappFailedException (this last one corresponds to stuff like failing to write data to a file, or cache fuckery or server/template failure)
+When we catch errors, pass them up unmodified, so even at the toplevel we can tell what layer the error came from.
+
+Then based on the layer
+** Config stuff
+Basically, we want cache_config and web_url specified somehow.
+Either hardcode, pass via CLI, or have a config file at a standard location.
+Minor issue: This is meant to be used as a library.
+One fix: Wrap it in a class, so init the class with config options and pass that around.
+Other fix:
+
+
+
+There's just two keys.
+- Time track: 4h monday (5-9). pfft.
+* Ok, new rule
+Basic problem - we want to return a python object.
+** Janky but consistent way
+Add some way for the server to send back serialized python objects. I can imagine this would be useful, even outside of this thing.
+Actually maybe not, since read_spectra and table.Table.read() both mean that for our purposes, FITS is an okay serialisation.
+** Less janky but inconsistent way
+This one feels so much better.
+Basically, first directly call the build_spectra functions. If those fail, we know it's a DataMissing error, and so we fallback to the server.
+
+So:
+- Nuke the plot param if we're only seeking objects DONE
+- TODO: Refactor the cache file to take explicit args, not a config dict.

@@ -8,10 +8,10 @@ import desispec.spectra
 import fitsio
 import numpy as np
 from astropy.table import Table
-from desispec.spectra import Spectra
 
-from models import *
-from utils import log
+from .models import *
+from .utils import log
+from .errors import DataNotFoundException, MalformedRequestException
 
 # Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.
@@ -40,7 +40,7 @@ def handle_spectra(req: ApiRequest) -> Spectra:
             release, params.ra, params.dec, params.radius, req.filters
         )
     else:
-        raise DesiApiException("Invalid Endpoint")
+        raise MalformedRequestException("Invalid Endpoint")
 
 
 def handle_zcatalog(req: ApiRequest) -> Zcatalog:
@@ -64,7 +64,7 @@ def handle_zcatalog(req: ApiRequest) -> Zcatalog:
             release, params.ra, params.dec, params.radius, req.filters
         )
     else:
-        raise DesiApiException("Invalid Endpoint")
+        raise MalformedRequestException("Invalid Endpoint")
 
 
 def get_radec_spectra(
@@ -112,7 +112,7 @@ def get_tile_spectra(
             group="cumulative",
         )
     except:
-        raise DesiApiException("unable to locate tiles or fibers")
+        raise DataNotFoundException("unable to locate tiles or fibers")
         # TODO: Figure out read_tile_spectra errors and use those
     log("read spectra")
     if isinstance(spectra, Tuple):
@@ -185,7 +185,7 @@ def get_tile_zcatalog(
             columns=desired_columns,
         )
     except Exception as e:
-        raise DesiApiException("unable to read tile information")
+        raise DataNotFoundException("unable to read tile information")
     keep = (zcatalog["TILEID"] == tile) & np.isin(zcatalog["FIBER"], fibers)
     zcatalog = zcatalog[keep]
     return filter_zcatalog(zcatalog, filters)
@@ -225,7 +225,7 @@ def get_target_zcatalog(
             columns=desired_columns,
         )
     except:
-        raise DesiApiException("unable to read target information")
+        raise DataNotFoundException("unable to read target information")
 
     keep = (
         ((zcatalog["ZCAT_PRIMARY"] == True) & np.isin(zcatalog["TARGETID"], target_ids))
@@ -242,7 +242,7 @@ def get_target_zcatalog(
         if i not in found_ids:
             missing_ids.append(i)
     if len(missing_ids):
-        raise DesiApiException("unable to find targets:", target_ids)
+        raise DataNotFoundException("unable to find targets:", target_ids)
     return filter_zcatalog(zcatalog, filters)
 
 
@@ -290,11 +290,11 @@ def get_populated_target_spectra(
         except:
             failures.append(target["TARGETID"])
     if len(failures):
-        raise DesiApiException("unable to locate spectra for targets", failures)
+        raise DataNotFoundException("unable to locate spectra for targets", failures)
     return target_spectra
 
 
-def clause_from_filter(key: str, value: str, targets: DataFrame) -> Clause:
+def clause_from_filter(key: str, value: str, targets: Zcatalog) -> Clause:
     """Given a column name KEY and a filter string VALUE of the form '<operation><value>' and a ZCATALOG of target metadata, create a boolean array where Arr[i] is true iff the i^th record satisfies the filter.
 
     :param key:

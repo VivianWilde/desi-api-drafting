@@ -1,0 +1,44 @@
+* High-Level Goal
+* Technical Details
+- Standard flask server
+- DataTables+Bootstrap to generate tables
+- Desihub libraries for backend data stuff
+* Demos
+# Spectra Plot
+** Spectra
+*** Tile
+http://1ocalhost:5000/api/v1/spectra/plot/fujilite/tile/80858/600,900,1000
+*** Targets
+http://1ocalhost:5000/api/v1/spectra/plot/fujilite/targets/39628368387245557,39628368404022902
+*** Ra/Dec
+http://1ocalhost:5000/api/v1/spectra/plot/fujilite/radec/210.9,24.8,180
+** Zcat /Metadata
+*** Tile
+http://1ocalhost:5000/api/v1/zcat/plot/fujilite/tile/80858/600,900,1000
+*** Targets
+http://1ocalhost:5000/api/v1/zcat/plot/fujilite/targets/39628368387245557,39628368404022902
+*** Ra/Dec
+http://1ocalhost:5000/api/v1/zcat/plot/fujilite/radec/210.9,24.8,180
+* Bells and Whistles
+** Filtering
+- http://0.0.0:5000/api/v1/zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2
+- http://0.0.0:5000/api/v1/zcat/plot/fujilite/radec/210.9,24.8,180?healpix=>8939
+** Multiple Filetypes
+** Post Requests
+zcat/plot
+* Roadmap
+** More file formats
+Standard astronomy formats: CSV and stuff
+** Refine Zcat Display
+Include human-readable info on the requested endpoint in the table.
+* Longterm
+** Filtering
+*** More Intuitive Syntax
+- Work around the need for "=" before every symbol.
+- A nicer way to include non-default columns without the bizarre workaround.
+*** Richer Options
+** SQLite
+- Maintain a SQLite database for the Release instead of zall.fits
+- Performance improvements
+- Would extend this to working with the Daily releases
+** More Endpoints??
