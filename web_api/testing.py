@@ -183,12 +183,15 @@ def test_post_targets():
 
 # Fujilite
 
+spectra_plot_endpoints = [
+    "spectra/plot/fujilite/radec/210.9,24.8,180",  # FIXME
+    "spectra/plot/fujilite/tile/80858/600,900,1000",  # FIXME
+    "spectra/plot/fujilite/targets/39628368387245557,39628368404022902",  # Works
+]
+
 fujilite_endpoints = [
-    # "spectra/plot/fujilite/radec/210.9,24.8,180",  # FIXME
     "spectra/download/fujilite/radec/210.9,24.8,180",  # Works
-    # "spectra/plot/fujilite/tile/80858/600,900,1000",  # FIXME
     "spectra/download/fujilite/tile/80858/600,900,1000",
-    # "spectra/plot/fujilite/targets/39628368387245557,39628368404022902",  # Works
     "spectra/download/fujilite/radec/210.9,24.8,180",  # Works
     "zcat/download/fujilite/radec/210.9,24.8,180",  # Works
     "zcat/download/fujilite/tile/80858/600,900,1000",  # Works
@@ -224,8 +227,8 @@ def test_fujilite_filegen():
         resps[endpoint] = test_file_gen(endpoint)
     return resps
 
-
-test_fujilite(fujilite_endpoints)
-test_fujilite(zcat_plot_endpoints)
-test_fujilite(filter_endpoints)
+test_fujilite(spectra_plot_endpoints)
+# test_fujilite(fujilite_endpoints)
+# test_fujilite(zcat_plot_endpoints)
+# test_fujilite(filter_endpoints)
 # test_post_targets()

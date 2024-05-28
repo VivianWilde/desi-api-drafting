@@ -1,6 +1,6 @@
 #!/usr/bin/env ipython3
 from os import getenv
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from enum import Enum
 from typing import List, Mapping, Tuple
 
@@ -139,7 +139,7 @@ class ApiRequest:
     release: str
     endpoint: Endpoint  # tile/target/radec
     params: Parameters
-    filters: Filter
+    filters: Filter = field(default_factory= lambda: dict())
 
     def get_cache_path(self) -> str:
         """Return the path (relative to cache dir) to write this request to

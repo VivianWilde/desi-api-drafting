@@ -167,6 +167,7 @@ def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
     """
 
     try:
+        print(spectra.extra_catalog)
         plotspectra(
             spectra,
             zcatalog=spectra.extra_catalog,
@@ -178,4 +179,4 @@ def spectra_to_html(spectra: Spectra, save_dir: str, file_name: str) -> str:
         )
         return f"{save_dir}/{file_name}.html"
     except Exception as e:
-        raise ServerFailedException("unable to produce plot")
+        raise ServerFailedException("unable to produce plot", e)
