@@ -14,7 +14,7 @@ release = '0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 import sys
-sys.path.append("../../..")
+sys.path.append("../../py")
 extensions = ["sphinx.ext.autodoc", "sphinx_rtd_theme"]
 
 templates_path = ['_templates']

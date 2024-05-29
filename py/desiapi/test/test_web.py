@@ -3,7 +3,7 @@ import requests
 
 from ..common.build_spectra import *
 from ..common.models import *
-from .server import test_file_gen
+from ..web.server import test_file_gen
 
 # Build_spectra tests: Test it gets the right data in our internal python format
 
@@ -228,8 +228,8 @@ def test_fujilite_filegen():
     return resps
 
 if __name__ == "__main__":
-    test_fujilite(spectra_plot_endpoints)
-# test_fujilite(fujilite_endpoints)
-# test_fujilite(zcat_plot_endpoints)
+    # test_fujilite(spectra_plot_endpoints)
+    test_fujilite(fujilite_endpoints)
+    test_fujilite(zcat_plot_endpoints)
 # test_fujilite(filter_endpoints)
 # test_post_targets()

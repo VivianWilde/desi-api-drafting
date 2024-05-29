@@ -1,4 +1,4 @@
-from .api import *
+from ..python.api import *
 import json
 
 def main():
