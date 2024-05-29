@@ -13,8 +13,8 @@ Simply copy that to a new file and pass the name to the `-c` parameter to run th
 # Autodoc Generation
 To generate the Sphinx HTML documentation for this project
 ```
-sphinx-apidoc -o docs/auto .
-cd docs/auto
+sphinx-apidoc py/desiapi -o doc/auto
+cd doc/auto
 make html
 ```
 The resulting docs will be in `docs/auto/_build/html` (start browing from `index.html`)

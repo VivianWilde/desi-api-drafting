@@ -1,7 +1,7 @@
-desi_api
-========
+desiapi
+=======
 
 .. toctree::
    :maxdepth: 4
 
-   desi_api
+   desiapi

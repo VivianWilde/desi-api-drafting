@@ -118,8 +118,13 @@ For instance, `params = {"ra": 210.9, "dec": 24.8, "radius":180}` when hitting t
 Instead of returning files, functions in the API return python objects. Spectra are represented by `desispec.spectra.Spectra` objects, and Zcatalog metadata by `astropy.table.Table`s.
 The functions search for data locally if `$DESI_SPECTRO_REDUX` is set.
 If a function fails to find data locally, it retrieves and caches a file from the server via the web API, and then reads a python object from that file.
-## How to Import
-`from desi_api.python.api import get_zcat_radec` (or whatever function you may want).
+
+For full documentation of functions and signatures, look at the [API reference](../auto/_build/html/desiapi.python.html)
+
+## Setup (Python Library)
+- Add `path-to-desi-api-drafting/py` to your `$PYTHONPATH` so that your python can find the module.
+- `import desiapi.python.api as desiapi` at the top of your file, and then just use the functions it provides within your script.
+- Or `from desiapi.python.api import get_zcat_radec` (or whatever function you may want) to only import a single function.
 
 ## Usage
 In most cases, simply running the function with the required arguments will get you what you need. Filters are specified as a dictionary. For instance `{"program":"dark","fiber":">100"}` would be a valid filter.

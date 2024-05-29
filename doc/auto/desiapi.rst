@@ -1,5 +1,5 @@
-desi\_api package
-=================
+desiapi package
+===============
 
 Subpackages
 -----------
@@ -7,14 +7,15 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   desi_api.common
-   desi_api.python
-   desi_api.web
+   desiapi.common
+   desiapi.python
+   desiapi.test
+   desiapi.web
 
 Module contents
 ---------------
 
-.. automodule:: desi_api
+.. automodule:: desiapi
    :members:
    :undoc-members:
    :show-inheritance:
