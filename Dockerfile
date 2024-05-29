@@ -10,9 +10,9 @@ FROM desipod:dev
 # RUN pip install pandas numpyencoder
 # Bring in the code, and also some of the other fripperies
 
-COPY . /desi_api
+COPY ./py/desiapi /desiapi
 # ADD templates /templates
-COPY docker_utilities/default.toml /config/default.toml
+COPY etc/docker/default.toml /config/default.toml
 
 # For 
 # RUN git clone https://github.com/VivianWilde/desi-api-drafting.git /code
@@ -27,4 +27,4 @@ VOLUME /cache
 # Crontab TODO
 
 # ENTRYPOINT cd $DESI_ROOT/code/desi-api-drafting && python cli.py
-ENTRYPOINT python -m desi_api.web.cli $@
+ENTRYPOINT python -m desiapi.web.cli $@

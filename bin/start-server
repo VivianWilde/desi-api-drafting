@@ -1,0 +1,3 @@
+#!/bin/sh
+# Specify the path to the config file as an argument
+python -m desiapi.web.cli server -c $1
