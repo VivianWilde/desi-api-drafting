@@ -13,7 +13,7 @@ def mimetype(path: str) -> str:
 
 def filename(path: str) -> str:
     """Return the file name and extension (no path info)"""
-    return os.path.split(path)[0]
+    return os.path.split(path)[1]
 
 
 def basename(path: str):
