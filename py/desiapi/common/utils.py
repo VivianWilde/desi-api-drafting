@@ -45,8 +45,8 @@ def get_config_map(CONFIG_FILE: str) -> dict:
         CONFIG = tomllib.load(conf)
 
         # for k in CONFIG["paths"]:
-        #     CONFIG["paths"][k]=os.path.expanduser(CONFIG["paths"][k])
-        CONFIG["cache"]["path"] = os.path.expanduser(CONFIG["cache"]["path"])
+        #     CONFIG["paths"][k]=os.path.expandvars(CONFIG["paths"][k])
+        CONFIG["cache"]["path"] = expand_path(CONFIG["cache"]["path"])
 
         return CONFIG
 
@@ -70,3 +70,15 @@ def get_max_cache_size(cache_size: str) -> int:
     size = float(cache_size[:-2])
     suffix = cache_size[-2:]
     return get_bytes(size, suffix)
+
+
+def is_nonempty(path: str) -> bool:
+    return os.path.exists(path) and (os.path.getsize(path) > 0)
+
+
+def is_empty(path: str) -> bool:
+    return not is_nonempty(path)
+
+
+def expand_path(path: str) -> str:
+    return os.path.expanduser(os.path.expandvars(path))

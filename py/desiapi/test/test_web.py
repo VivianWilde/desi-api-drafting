@@ -227,6 +227,7 @@ def test_fujilite_filegen():
         resps[endpoint] = test_file_gen(endpoint)
     return resps
 
+
 if __name__ == "__main__":
     # test_fujilite(spectra_plot_endpoints)
     test_fujilite(fujilite_endpoints)
