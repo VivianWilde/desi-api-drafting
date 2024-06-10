@@ -1,17 +1,16 @@
 from typing import Tuple
 from astropy.table import Table
 import fitsio
-import pickle
 from pandas import DataFrame
 import pandas as pd
-from collections import OrderedDict
 from ..common.utils import basename, filename
 import numpy as np
 from numpy import ndarray
 import sqlite3
-import numpy.lib.recfunctions as rfn
+import os
 
-SQL_DIR = "/home/vivien/d/urap/sql"
+# SQL_DIR = "/home/vivien/d/urap/sql"
+SQL_DIR = os.path.expandvars("$SCRATCH/sql")
 COEFF_COLUMN = "COEFF"
 
 
@@ -167,7 +166,7 @@ def add_field(a, descr):
 
 
 # Driver code
-FITS_FILE = "/home/vivien/d/urap/data/fujilite/zcatalog/zall-pix-fujilite.fits"
+FITS_FILE = os.path.expandvars(("$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-tilecumulative-jura.fits"))
 
 
 def to_sql():
