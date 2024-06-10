@@ -1,6 +1,7 @@
 from ..python.api import *
 import json
 
+
 def main():
     client = DesiApiClient(release="fujilite")
     responses = [
@@ -12,6 +13,7 @@ def main():
         print(i)
         print(i.dtype)
         print()
+
 
 if __name__ == "__main__":
     main()

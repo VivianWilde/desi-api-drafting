@@ -173,9 +173,11 @@ def to_sql():
     return numpy_to_sql(FITS_FILE)
 
 
+
 def from_sql():
     sql_file = get_sql_file_path(tablename_from_filename(FITS_FILE))
     return sql_to_numpy(sql_file)
+
 
 
 if __name__ == "__main__":
