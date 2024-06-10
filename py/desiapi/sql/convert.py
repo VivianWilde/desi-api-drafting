@@ -9,8 +9,8 @@ from numpy import ndarray
 import sqlite3
 import os
 
-# SQL_DIR = "/home/vivien/d/urap/sql"
-SQL_DIR = os.path.expandvars("$SCRATCH/sql")
+SQL_DIR = "/home/vivien/d/urap/sql"
+# SQL_DIR = os.path.expandvars("$SCRATCH/sql")
 COEFF_COLUMN = "COEFF"
 
 
@@ -166,7 +166,8 @@ def add_field(a, descr):
 
 
 # Driver code
-FITS_FILE = os.path.expandvars(("$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-tilecumulative-jura.fits"))
+# FITS_FILE = os.path.expandvars(("$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-tilecumulative-jura.fits"))
+FITS_FILE = os.path.expandvars(("~/d/urap/data/fujilite/zcatalog/zall-tilecumulative-fujilite.fits"))
 
 
 def to_sql():

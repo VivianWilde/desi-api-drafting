@@ -101,6 +101,7 @@ def get_tile_spectra(
     latest = max(os.listdir(folder))
     log(latest)
 
+    # TODO: SQL stuff
     try:
         spectra = desispec.io.read_tile_spectra(
             tile,
@@ -176,6 +177,7 @@ def get_tile_zcatalog(
     for k in filters.keys():
         desired_columns.append(k)
 
+        # TODO: SQL stuff
     zcatfile = release.tile_fits
     log("reading target zcatalog info from: ", zcatfile)
     try:

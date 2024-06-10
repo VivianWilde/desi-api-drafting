@@ -58,19 +58,23 @@ class RequestedData(Enum):
     SPECTRA = 2
 
     def __str__(self) -> str:
-        match self:
-            case RequestedData.ZCAT:
-                return "zcat"
-            case RequestedData.SPECTRA:
-                return "spectra"
-            case _:
-                return "???"
+        return self.name
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 
 class ResponseType(Enum):
     UNSPECIFIED = 0
     DOWNLOAD = 1
     PLOT = 2
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
 
 
 class Endpoint(Enum):
@@ -78,6 +82,13 @@ class Endpoint(Enum):
     TILE = 1
     TARGETS = 2
     RADEC = 3
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
 
 
 @dataclass

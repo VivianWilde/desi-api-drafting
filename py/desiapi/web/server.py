@@ -17,7 +17,9 @@ TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 app = Flask("DESI API Server", template_folder=TEMPLATE_DIR)
 # app.config.from_object(__name__)
 
-DOC_URL = "https://github.com/VivianWilde/desi-api-drafting/blob/main/userdoc.org"
+DOC_URL = (
+    "https://github.com/VivianWilde/desi-api-drafting/blob/main/doc/user/userdoc.md"
+)
 
 
 @app.route("/")
@@ -169,7 +171,7 @@ def process_request(req: ApiRequest) -> Response:
                 "Request": repr(req),
                 "Error": str(e),
                 "Help": f"See {DOC_URL} for an overview of request syntax",
-            }
+            }, indent=4
         )
         log(e)
         abort(Response(info, status=500))
@@ -267,7 +269,7 @@ def build_params_from_strings(endpoint: Endpoint, params: List[str]) -> Paramete
 def invalid_request_error(e: Exception) -> Response:
     """Take an error resulting from an invalid request, and wrap it in a Flask response"""
     info = json.dumps(
-        {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}
+        {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}, indent=4
     )
     return Response(info, status=400)
 
