@@ -38,10 +38,8 @@ def numpy_to_sql(fits_file: str):
 
 
 def numpy_to_dataframe(arr: ndarray) -> DataFrame:
-    # NOTE: Also includes the dtype as a separate blob column, for hackery reasons
     copy = arr[[name for name in arr.dtype.names if name != COEFF_COLUMN]]
     naive = DataFrame(copy)
-    picked_dtype = pickle.dumps(arr.dtype)
     num_coeffs = len(arr[COEFF_COLUMN][0])
     print(num_coeffs)
     for i in range(num_coeffs):
