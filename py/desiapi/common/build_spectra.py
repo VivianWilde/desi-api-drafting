@@ -12,6 +12,8 @@ from astropy.table import Table
 from .models import *
 from .utils import log
 from .errors import DataNotFoundException, MalformedRequestException
+from ..sql import convert as sqlconvert
+
 
 # Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.
@@ -101,7 +103,6 @@ def get_tile_spectra(
     latest = max(os.listdir(folder))
     log(latest)
 
-    # TODO: SQL stuff
     try:
         spectra = desispec.io.read_tile_spectra(
             tile,
@@ -178,14 +179,8 @@ def get_tile_zcatalog(
         desired_columns.append(k)
 
         # TODO: SQL stuff
-    zcatfile = release.tile_fits
-    log("reading target zcatalog info from: ", zcatfile)
     try:
-        zcatalog = fitsio.read(
-            zcatfile,
-            "ZCATALOG",
-            columns=desired_columns,
-        )
+        zcatalog = unfiltered_zcatalog(release.tile_sql, release.tile_fits, desired_columns)
     except Exception as e:
         raise DataNotFoundException("unable to read tile information")
     keep = (zcatalog["TILEID"] == tile) & np.isin(zcatalog["FIBER"], fibers)
@@ -218,14 +213,8 @@ def get_target_zcatalog(
         if k not in SPECIAL_QUERY_PARAMS:
             desired_columns.append(k)
 
-    zcatfile = release.healpix_fits
-    log("reading target zcatalog info from: ", zcatfile)
     try:
-        zcatalog = fitsio.read(
-            zcatfile,
-            "ZCATALOG",
-            columns=desired_columns,
-        )
+        zcatalog = unfiltered_zcatalog(release.healpix_sql, release.healpix_fits, desired_columns)
     except:
         raise DataNotFoundException("unable to read target information")
 
@@ -246,6 +235,30 @@ def get_target_zcatalog(
     if len(missing_ids):
         raise DataNotFoundException("unable to find targets:", target_ids)
     return filter_zcatalog(zcatalog, filters)
+
+def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str]):
+    """Attempt to read zcat info from the sqlite file, else fall back to fits file
+
+    :param fits_file:
+    :param sql_file:
+    :param desired_columns:
+    :returns:
+
+    """
+
+    if os.path.exists(sql_file):
+        log("reading zcatalog info from", sql_file)
+        try:
+            return sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
+        except Exception as e:
+            log(e)
+            log("reading zcatalog info from: ", fits_file)
+            return fitsio.read(
+            fits_file,
+            "ZCATALOG",
+            columns=desired_columns,
+        )
+        # FitsIO errors are caught by the calling get_target_zcatalog
 
 
 # TODO needs a better name

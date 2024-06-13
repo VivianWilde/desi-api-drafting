@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 from astropy.table import Table
 import fitsio
 from pandas import DataFrame
@@ -66,15 +66,15 @@ def dataframe_to_sql(
 
 
 # Other way around
-def sql_to_astropy(sqlite_file: str) -> Table:
+def sql_to_astropy(sqlite_file: str, columns=[]) -> Table:
     connection = sqlite3.connect(sqlite_file)
-    df = sql_to_dataframe(connection)
+    df = sql_to_dataframe(connection, columns)
     return dataframe_to_astropy(df)
 
 
-def sql_to_numpy(sqlite_file: str) -> ndarray:
+def sql_to_numpy(sqlite_file: str, columns=[]) -> ndarray:
     connection = sqlite3.connect(sqlite_file)
-    df = sql_to_dataframe(connection)
+    df = sql_to_dataframe(connection, columns)
     return dataframe_to_numpy(df)
 
 
@@ -93,21 +93,25 @@ def dataframe_to_numpy(df: DataFrame) -> ndarray:
         for name in colnames
         if name.startswith(f"{COEFF_COLUMN}_")
     ]
-    num_coeffs = max(coeff_indices) + 1
-    # new_dtype = np.dtype(('>f8', (num_coeffs,)))
+    if coeff_indices:
+        num_coeffs = max(coeff_indices) + 1
+        new_dtype = [(COEFF_COLUMN, (">f8", (num_coeffs,)))]
+        naive = add_field(naive, new_dtype)
+        for i in range(num_coeffs):
+            naive[COEFF_COLUMN][:, i] = naive[f"COEFF_{i}"]
 
-    new_dtype =[(COEFF_COLUMN, (">f8", (num_coeffs,)))]
-    naive = add_field(naive, new_dtype)
-
-    for i in range(num_coeffs):
-        naive[COEFF_COLUMN][:, i] = naive[f"COEFF_{i}"]
     return naive
 
 
-def sql_to_dataframe(connection: sqlite3.Connection) -> DataFrame:
+def sql_to_dataframe(connection: sqlite3.Connection, columns: List[str]) -> DataFrame:
     unique_table = get_table_list(connection)[0]
     # print(unique_table)
     # This is injectable, probably. That's not great.
+    # TODO Switch to sqlalchemy so I don't fuck myself over and disgrace myself.
+    if columns:
+        return pd.read_sql_query(
+            f"SELECT {','.join(columns)} FROM {unique_table}", connection
+        )
     return pd.read_sql_query(f"SELECT * FROM {unique_table}", connection)
     # return pd.read_sql_table(unique_table, connection)
 
@@ -130,6 +134,7 @@ def setup_db(sql_file: str) -> sqlite3.Connection:
 
 def get_sql_file_path(tablename: str) -> str:
     return f"{SQL_DIR}/{tablename}.sqlite"
+
 
 # From https://stackoverflow.com/questions/1201817/adding-a-field-to-a-structured-numpy-array
 def add_field(a, descr):
@@ -164,10 +169,11 @@ def add_field(a, descr):
     return b
 
 
-
 # Driver code
 # FITS_FILE = os.path.expandvars(("$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-tilecumulative-jura.fits"))
-FITS_FILE = os.path.expandvars(("~/d/urap/data/fujilite/zcatalog/zall-tilecumulative-fujilite.fits"))
+FITS_FILE = os.path.expandvars(
+    ("~/d/urap/data/fujilite/zcatalog/zall-tilecumulative-fujilite.fits")
+)
 
 
 def to_sql():

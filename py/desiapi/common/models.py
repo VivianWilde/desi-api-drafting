@@ -26,7 +26,8 @@ SPECTRO_REDUX = getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
 DEFAULT_CONF = "/config/default.toml"
 USER_CONF = "/config/config.toml"
-DEFAULT_FILETYPE = "fits"  # The default filetype for zcat files
+# DEFAULT_FILETYPE = "fits"  # The default filetype for zcat files
+DEFAULT_FILETYPE = "json"  # The default filetype for zcat files
 SPECIAL_QUERY_PARAMS = [
     "filetype"
 ]  # Query params that don't correspond to data filters
@@ -43,12 +44,12 @@ def canonise_release_name(release: str) -> str:
     # TODO This is kind of gross, we should really have this live outside the code in a json or something, or pulled directly?
     allowed = ["fuji", "iron", "daily", "fujilite"]
     translations = {"edr": "fuji", "dr1": "iron"}
-    if release in allowed:
-        return release
     if release in translations.keys():
         return translations[release]
+    if release.isidentifier():
+        return release
     raise MalformedRequestException(
-        f"release must be one of FUJI or IRON, not {release}"
+        f"release must be alphanumeric, cannot be {release}"
     )
 
 
@@ -68,13 +69,12 @@ class ResponseType(Enum):
     UNSPECIFIED = 0
     DOWNLOAD = 1
     PLOT = 2
+
     def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
         return self.__str__()
-
-
 
 
 class Endpoint(Enum):
@@ -82,13 +82,12 @@ class Endpoint(Enum):
     TILE = 1
     TARGETS = 2
     RADEC = 3
+
     def __str__(self) -> str:
         return self.name
 
     def __repr__(self) -> str:
         return self.__str__()
-
-
 
 
 @dataclass
@@ -220,3 +219,12 @@ class DataRelease:
         self.tile_dir = f"{self.directory}/tiles/cumulative"
         self.healpix_fits = f"{self.directory}/zcatalog/zall-pix-{self.name}.fits"
         # self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
+
+    # FIXME hardcoded because I hate it here.
+    @property
+    def tile_sql(self) -> str:
+        return "/home/vivien/drive/work/urap/sql/zall_tilecumulative_fujilite.sqlite"
+
+    @property
+    def healpix_sql(self) -> str:
+        return "/home/vivien/drive/work/urap/sql/zall_pix_fujilite.sqlite"
