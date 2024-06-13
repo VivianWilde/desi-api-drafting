@@ -3,7 +3,6 @@ from astropy.table import Table
 import fitsio
 from pandas import DataFrame
 import pandas as pd
-from ..common.utils import basename, filename
 import numpy as np
 from numpy import ndarray
 import sqlite3
@@ -12,6 +11,16 @@ import os
 SQL_DIR = "/home/vivien/d/urap/sql"
 # SQL_DIR = os.path.expandvars("$SCRATCH/sql")
 COEFF_COLUMN = "COEFF"
+
+
+def filename(path: str) -> str:
+    """Return the file name and extension (no path info)"""
+    return os.path.split(path)[1]
+
+
+def basename(path: str):
+    """Return the file name without extension or path info"""
+    return os.path.splitext(path)[0].split(".")[0]
 
 
 def astropy_to_sql(fits_file: str) -> int | None:
