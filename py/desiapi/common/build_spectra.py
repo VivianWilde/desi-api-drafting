@@ -11,7 +11,7 @@ from astropy.table import Table
 
 from .models import *
 from .utils import log
-from .errors import DataNotFoundException, MalformedRequestException
+from .errors import DataNotFoundException, MalformedRequestException, SqlException
 from ..sql import convert as sqlconvert
 
 
@@ -180,7 +180,9 @@ def get_tile_zcatalog(
 
         # TODO: SQL stuff
     try:
-        zcatalog = unfiltered_zcatalog(release.tile_sql, release.tile_fits, desired_columns)
+        zcatalog = unfiltered_zcatalog(
+            release.tile_sql, release.tile_fits, desired_columns
+        )
     except Exception as e:
         raise DataNotFoundException("unable to read tile information")
     keep = (zcatalog["TILEID"] == tile) & np.isin(zcatalog["FIBER"], fibers)
@@ -214,7 +216,9 @@ def get_target_zcatalog(
             desired_columns.append(k)
 
     try:
-        zcatalog = unfiltered_zcatalog(release.healpix_sql, release.healpix_fits, desired_columns)
+        zcatalog = unfiltered_zcatalog(
+            release.healpix_sql, release.healpix_fits, desired_columns
+        )
     except:
         raise DataNotFoundException("unable to read target information")
 
@@ -236,6 +240,7 @@ def get_target_zcatalog(
         raise DataNotFoundException("unable to find targets:", target_ids)
     return filter_zcatalog(zcatalog, filters)
 
+
 def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str]):
     """Attempt to read zcat info from the sqlite file, else fall back to fits file
 
@@ -246,18 +251,18 @@ def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str
 
     """
 
-    if os.path.exists(sql_file):
+    try:
         log("reading zcatalog info from", sql_file)
-        try:
-            return sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
-        except Exception as e:
+        zcatalog = sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
+        log("zcatalog: ", zcatalog)
+    except Exception as e:
             log(e)
             log("reading zcatalog info from: ", fits_file)
             return fitsio.read(
-            fits_file,
-            "ZCATALOG",
-            columns=desired_columns,
-        )
+                fits_file,
+                "ZCATALOG",
+                columns=desired_columns,
+            )
         # FitsIO errors are caught by the calling get_target_zcatalog
 
 

@@ -12,3 +12,6 @@ class MalformedRequestException(DesiApiException):
 
 class ServerFailedException(DesiApiException):
     pass
+
+class SqlException(DesiApiException):
+    pass
