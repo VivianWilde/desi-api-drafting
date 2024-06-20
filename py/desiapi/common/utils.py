@@ -5,7 +5,6 @@ import tomllib
 import datetime as dt
 from typing import Any, Callable, List
 import numpy as np
-from py.desiapi.common.models import Zcatalog
 
 
 # File helpers
@@ -94,14 +93,7 @@ def get_max_cache_size(cache_size: str) -> int:
 # Permutations are numpy arrays of small integers, so that ARR[PERM] applies PERM to ARR
 
 def invert(permutation):
-    inverse = np.array(permutation.shape, dtype=int)
+    inverse = np.zeros(permutation.shape, dtype=int)
     for i,v in enumerate(permutation):
         inverse[v]=i
-
-def sort_spectra(spectra: Spectra, target_ids: List[int]):
-    # Sort spectra data in order defined by target IDs
-    pass
-def sort_zcat(zcat: Zcatalog, target_ids: List[int]):
-    sort_zcat = np.argsort(zcat, order= "TARGETID")
-    sort_input = np.argsort(target_ids)
-    zcat[sort_zcat][sort_input]
+    return inverse

@@ -7,10 +7,10 @@ import desispec.io
 import desispec.spectra
 import fitsio
 import numpy as np
-from astropy.table import Table
+from astropy.table import Table, vstack
 
 from .models import *
-from .utils import log
+from .utils import log, invert
 from .errors import DataNotFoundException, MalformedRequestException, SqlException
 from ..sql import convert as sqlconvert
 
@@ -83,8 +83,8 @@ def get_radec_spectra(
     """
     relevant_targets = get_radec_zcatalog(release, ra, dec, radius, filters)
     log(f"Retrieving {len(relevant_targets)} targets")
-    spectra = get_populated_target_spectra(release, relevant_targets)
-    return desispec.spectra.stack(spectra)
+    return get_populated_target_spectra(release, relevant_targets)
+    # return desispec.spectra.stack(spectra)
 
 
 def get_tile_spectra(
@@ -254,9 +254,9 @@ def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str
     try:
         log("reading zcatalog info from", sql_file)
         zcatalog = sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
-        log("zcatalog: ", zcatalog)
+        # log("zcatalog: ", zcatalog)
     except Exception as e:
-        log(e)
+        # log(e)
         log("reading zcatalog info from: ", fits_file)
         return fitsio.read(
             fits_file,
@@ -269,7 +269,7 @@ def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str
 # TODO needs a better name
 def get_populated_target_spectra(
     release: DataRelease, targets: Zcatalog
-) -> List[Spectra]:
+) -> Spectra:
     """
     Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list.
 
@@ -277,50 +277,29 @@ def get_populated_target_spectra(
     :param targets: A list of Target objects
     :returns: A list of Spectra objects, one for each target passed in
     """
-    target_spectra = []
-    failures = []
-    sources_to_targets = dict()
+    redrock_to_targets = dict()
+    target_spectra = desispec.io.read_spectra_parallel(targets, specprod=release.name)
     for target in targets:
-        try:
-            source_file = desispec.io.findfile(
-                "coadd",
-                survey=target["SURVEY"],
-                faprogram=target["PROGRAM"],
-                groupname="healpix",
-                healpix=target["HEALPIX"],
-                specprod_dir=release.directory,
-            )
-            redrock_file = desispec.io.findfile(
-                "redrock",
-                survey=target["SURVEY"],
-                faprogram=target["PROGRAM"],
-                groupname="healpix",
-                healpix=target["HEALPIX"],
-                specprod_dir=release.directory,
-            )
-            # Map each source to the list of targets we can find from it
-            sources_to_targets[(source_file, redrock_file)] = sources_to_targets.get(
-                (source_file, redrock_file), []
-            ) + [target["TARGETID"]]
-            # redrocks_to_targets[redrock_file] = redrocks_to_targets.get(redrock_file, []) + [target["TARGETID"]]
-        except:
-            failures.append(target["TARGETID"])
-
-    for (source, redrock), targets in sources_to_targets.items():
-        try:
-            spectra = desispec.io.read_spectra(source, targetids=targets)
-            zcatalog = Table.read(redrock, "REDSHIFTS")
-            keep = np.isin(zcatalog["TARGETID"], targets)
-            zcatalog = zcatalog[keep]
-            log(spectra.fibermap["TARGETID"])
-            log(zcatalog["TARGETID"])
-            spectra.extra_catalog = zcatalog
-            target_spectra.append(spectra)
-        except:
-            failures.extend(targets)
-
-    if len(failures):
-        raise DataNotFoundException("unable to locate spectra for targets", failures)
+        redrock_file = desispec.io.findfile(
+            "redrock",
+            survey=target["SURVEY"],
+            faprogram=target["PROGRAM"],
+            groupname="healpix",
+            healpix=target["HEALPIX"],
+            specprod_dir=release.directory,
+        )
+        redrock_to_targets[redrock_file] = redrock_to_targets.get(redrock_file, [])+[target["TARGETID"]]
+    zcatalog = Table.read(redrock_file, "REDSHIFTS")
+    zcatalog.remove_rows(slice(0,len(zcatalog)))
+    total_kept=0
+    for redrock, redrock_targets in redrock_to_targets.items():
+        new = Table.read(redrock, "REDSHIFTS")
+        keep = np.isin(new["TARGETID"], redrock_targets)
+        new = new[keep]
+        zcatalog = vstack([zcatalog,new])
+        total_kept += len(new)
+    zcatalog = sort_zcat(zcatalog, targets)
+    target_spectra.extra_catalog = zcatalog
     return target_spectra
 
 
@@ -381,3 +360,12 @@ def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
             clause = clause_from_filter(k, v, zcatalog)
             filtered_keep = np.logical_and(filtered_keep, clause)
     return zcatalog[filtered_keep]
+
+
+
+# Permutation Functions
+def sort_zcat(zcat: Zcatalog, target_ids: Zcatalog):
+    sorted_zcat = np.argsort(zcat, order="TARGETID")
+    sorted_input = np.argsort(target_ids)
+    # zcat->sorted, and then reverse input->sorted, so we end up with zcat->sorted->input
+    return zcat[sorted_zcat][invert(sorted_input)]
