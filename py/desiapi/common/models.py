@@ -215,10 +215,10 @@ class DataRelease:
         self.name = name.lower()
         self.directory = f"{SPECTRO_REDUX}/{self.name}"
         self.tile_fits = (
-            f"{self.directory}/zcatalog/zall-tilecumulative-{self.name}.fits"
+            f"{self.zcat_dir}/zall-tilecumulative-{self.name}.fits"
         )
         self.tile_dir = f"{self.directory}/tiles/cumulative"
-        self.healpix_fits = f"{self.directory}/zcatalog/zall-pix-{self.name}.fits"
+        self.healpix_fits = f"{self.zcat_dir}/zall-pix-{self.name}.fits"
         # self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
 
     @property
