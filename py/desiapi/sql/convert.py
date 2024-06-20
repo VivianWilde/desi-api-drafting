@@ -71,7 +71,7 @@ def astropy_to_dataframe(table: Table) -> DataFrame:
 def dataframe_to_sql(
     df: DataFrame, table_name: str, connection: sqlite3.Connection
 ) -> int | None:
-    return df.to_sql(table_name, connection, if_exists="replace")
+    return df.to_sql(table_name, connection, if_exists="replace", chunksize=1000)
 
 
 # Other way around

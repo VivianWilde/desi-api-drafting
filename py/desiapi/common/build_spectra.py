@@ -256,14 +256,14 @@ def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str
         zcatalog = sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
         log("zcatalog: ", zcatalog)
     except Exception as e:
-            log(e)
-            log("reading zcatalog info from: ", fits_file)
-            return fitsio.read(
-                fits_file,
-                "ZCATALOG",
-                columns=desired_columns,
-            )
-        # FitsIO errors are caught by the calling get_target_zcatalog
+        log(e)
+        log("reading zcatalog info from: ", fits_file)
+        return fitsio.read(
+            fits_file,
+            "ZCATALOG",
+            columns=desired_columns,
+        )
+    # FitsIO errors are caught by the calling get_target_zcatalog
 
 
 # TODO needs a better name
@@ -277,10 +277,9 @@ def get_populated_target_spectra(
     :param targets: A list of Target objects
     :returns: A list of Spectra objects, one for each target passed in
     """
-    # Unoptimised: Reads one file per target, no grouping of targets, so may read same file several times.
-    # TODO: Optimise, logging
     target_spectra = []
     failures = []
+    sources_to_targets = dict()
     for target in targets:
         try:
             source_file = desispec.io.findfile(
@@ -299,16 +298,27 @@ def get_populated_target_spectra(
                 healpix=target["HEALPIX"],
                 specprod_dir=release.directory,
             )
-            spectra = desispec.io.read_spectra(
-                source_file, targetids=[target["TARGETID"]]
-            )
-            zcatalog = Table.read(redrock_file, "REDSHIFTS")
-            keep = zcatalog["TARGETID"] == target["TARGETID"]
+            # Map each source to the list of targets we can find from it
+            sources_to_targets[(source_file, redrock_file)] = sources_to_targets.get(
+                (source_file, redrock_file), []
+            ) + [target["TARGETID"]]
+            # redrocks_to_targets[redrock_file] = redrocks_to_targets.get(redrock_file, []) + [target["TARGETID"]]
+        except:
+            failures.append(target["TARGETID"])
+
+    for (source, redrock), targets in sources_to_targets.items():
+        try:
+            spectra = desispec.io.read_spectra(source, targetids=targets)
+            zcatalog = Table.read(redrock, "REDSHIFTS")
+            keep = np.isin(zcatalog["TARGETID"], targets)
             zcatalog = zcatalog[keep]
+            log(spectra.fibermap["TARGETID"])
+            log(zcatalog["TARGETID"])
             spectra.extra_catalog = zcatalog
             target_spectra.append(spectra)
         except:
-            failures.append(target["TARGETID"])
+            failures.extend(targets)
+
     if len(failures):
         raise DataNotFoundException("unable to locate spectra for targets", failures)
     return target_spectra

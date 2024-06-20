@@ -1,7 +1,3 @@
----
-author: Vivien Goyal
----
-
 # Introduction
 
 The quickest way to get started with running the server raw (i.e not through a docker container) is to run `python -m desi_api.web.cli server -c docker_utilities/config.toml`, which uses a prewritten config file and starts a webserver.
@@ -38,6 +34,27 @@ For instance `python run.py server -c ./config.toml -m public` to run a server t
 - TODO: Document the redrock template shenanigans here.
 
 
+# Rancher/Spin Setup
+## Cache Volume
+## Server (Deployment)
+### Pod
+- Add annotations as described in [DESI docs](https://desi.lbl.gov/trac/wiki/Computing/NerscSpin/Security#AddingaDESIread-onlypassword)
+- Security Context: Specify the user ID to run as (any user with DESI permissions is fine)
+- Add a bind-mount named *spectro-redux* pointing to `/global/cfs/cdirs/desi/spectro/redux` (or wherever `$DESI_SPECTRO_REDUX` points)
+- Add a bind-mount named *public* pointing to `/global/cfs/cdirs/desi/public` (or wherever `$DESI_ROOT/public` points)
+- TODO cache setup
+### Container
+- Image: `vivianwilde/desiapi` (or you can build the image from the repo yourself, and push it to whatever name you prefer, I'm not your boss)
+- Networking: Add a networking service of type *Cluster IP*, named *Flask* running on port *5000* over *TCP*.
+- Command: `python -m desiapi.web.cli`, with arguments just `server`
+- Env Vars: `DESI_API_CONFIG_FILE` is the env var that defines where (within the container) to look for the config file. Point it to wherever you mounted the config file from CFS.
+- Security Context: Input "Run As User ID" matching the pod Filsystem Group ID, and select "must run as non-root user"
+- Mount *spectro-redux* at `/desi/spectro/redux`
+- Mount *public* at `/desi/public`
+- Mount *cache* at `/cache`
+## Ingress
+
+## Cache Clean (Cron Job)
 # Core Libraries
 
 - Flask :: Runs the web app
@@ -116,6 +133,9 @@ Defines functions that take in some cache configuration (taken from the `[cache]
 
 ### Utils.py
 A motley collection of general-purpose utilities like small parsers/translators.
+
+## SQL
+The logic for turning `zall-*.fits` files into sqlite files.
 
 # Feature Implementation Details
 

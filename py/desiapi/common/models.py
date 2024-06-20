@@ -1,8 +1,9 @@
 #!/usr/bin/env ipython3
-from os import getenv
+import os
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 from typing import List, Mapping, Tuple
+from .utils import list_directories
 
 from numpy import ndarray
 
@@ -22,7 +23,7 @@ Zcatalog = Table
 Clause = List[bool]  # A boolean mask, used in filtering Zcatalogs
 Spectra = DesiSpectra
 
-SPECTRO_REDUX = getenv("DESI_SPECTRO_REDUX")
+SPECTRO_REDUX = os.getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
 DEFAULT_CONF = "/config/default.toml"
 USER_CONF = "/config/config.toml"
@@ -219,6 +220,23 @@ class DataRelease:
         self.tile_dir = f"{self.directory}/tiles/cumulative"
         self.healpix_fits = f"{self.directory}/zcatalog/zall-pix-{self.name}.fits"
         # self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
+
+    @property
+    def zcat_dir(self)->str:
+        guess = f"{self.directory}/zcatalog"
+        if os.path.exists(f"{guess}/zall-pix-{self.name}.fits") and os.path.exists(f"{guess}/zall-tilecumulative-{self.name}.fits"):
+            return guess
+        else:
+            dirs = list_directories(guess)
+            versions = [int(d.replace("v","")) for d in dirs]
+            latest = max(versions)
+            return f"{guess}/v{latest}"
+
+
+
+
+        
+
 
     # FIXME hardcoded because I hate it here.
     @property
