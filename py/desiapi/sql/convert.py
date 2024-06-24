@@ -7,9 +7,11 @@ import numpy as np
 from numpy import ndarray
 import sqlite3
 import os
+import datetime as dt
+import math
 
-SQL_DIR = "/home/vivien/d/urap/sql"
-# SQL_DIR = os.path.expandvars("$SCRATCH/sql")
+#SQL_DIR = "/home/vivien/d/urap/sql"
+SQL_DIR = os.path.expandvars("$SCRATCH/sql")
 COEFF_COLUMN = "COEFF"
 
 
@@ -41,7 +43,10 @@ def numpy_to_sql(fits_file: str):
     sql_file = get_sql_file_path(table_name)
     engine = setup_db(sql_file)
     array = fitsio.read(fits_file)
+    print("read", dt.datetime.now())
     df = numpy_to_dataframe(array)
+    print("dataframed!", dt.datetime.now())
+    del array
     return dataframe_to_sql(df, table_name, engine)
 
 
@@ -52,7 +57,6 @@ def numpy_to_dataframe(arr: ndarray) -> DataFrame:
     print(num_coeffs)
     for i in range(num_coeffs):
         naive[f"{COEFF_COLUMN}_{i}"] = arr[COEFF_COLUMN][:, i]
-
     return naive
 
 
@@ -71,7 +75,19 @@ def astropy_to_dataframe(table: Table) -> DataFrame:
 def dataframe_to_sql(
     df: DataFrame, table_name: str, connection: sqlite3.Connection
 ) -> int | None:
-    return df.to_sql(table_name, connection, if_exists="replace")
+    # return df.to_sql(table_name, connection, if_exists="replace", chunksize=10000)
+    stepsize=2*(10**6)
+    print("Expected Iters: ", len(df)//stepsize)
+    for i in range(0, len(df), stepsize):
+        print(i)
+        try:
+            df.iloc[i:min(i+stepsize,len(df))].to_sql(table_name, connection, index=False, if_exists="append")
+        except Exception as e:
+            print(f"FAILED! At Index {i}")
+            print(e)
+
+
+
 
 
 # Other way around
@@ -84,7 +100,8 @@ def sql_to_astropy(sqlite_file: str, columns=[]) -> Table:
 def sql_to_numpy(sqlite_file: str, columns=[]) -> ndarray:
     connection = sqlite3.connect(sqlite_file)
     df = sql_to_dataframe(connection, columns)
-    return dataframe_to_numpy(df)
+    return df
+    # return dataframe_to_numpy(df)
 
 
 def dataframe_to_astropy(df: DataFrame) -> Table:
@@ -117,6 +134,8 @@ def sql_to_dataframe(connection: sqlite3.Connection, columns: List[str]) -> Data
     # print(unique_table)
     # This is injectable, probably. That's not great.
     # TODO Switch to sqlalchemy so I don't fuck myself over and disgrace myself.
+    print(connection)
+    print(columns)
     if columns:
         return pd.read_sql_query(
             f"SELECT {','.join(columns)} FROM {unique_table}", connection
@@ -179,10 +198,10 @@ def add_field(a, descr):
 
 
 # Driver code
-# FITS_FILE = os.path.expandvars(("$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-tilecumulative-jura.fits"))
-FITS_FILE = os.path.expandvars(
-    ("~/d/urap/data/fujilite/zcatalog/zall-tilecumulative-fujilite.fits")
-)
+FITS_FILE = os.path.expandvars("/dvs_ro/cfs/cdirs/desi/spectro/redux/jura/zcatalog/v1/zall-tilecumulative-jura.fits")
+# FITS_FILE = os.path.expandvars(
+# j  ("~/d/urap/data/fujilite/zcatalog/zall-tilecumulative-fujilite.fits")
+#)
 
 
 def to_sql():
@@ -191,11 +210,15 @@ def to_sql():
 
 def from_sql():
     sql_file = get_sql_file_path(tablename_from_filename(FITS_FILE))
-    return sql_to_numpy(sql_file)
+    return sql_to_numpy(sql_file, columns=[])
 
 
 if __name__ == "__main__":
-    orig = fitsio.read(FITS_FILE)
-    to_sql()
-    reconstructed = from_sql()
+    print(dt.datetime.now())
+    #orig = fitsio.read(FITS_FILE)
+    #print("read orig", dt.datetime.now())
+    new=from_sql()
+    print("read sql", dt.datetime.now())
+    # to_sql()
+    # reconstructed = from_sql()
     # Play around, check values
