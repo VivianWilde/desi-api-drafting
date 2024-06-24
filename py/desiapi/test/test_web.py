@@ -198,6 +198,11 @@ fujilite_endpoints = [
     "zcat/download/fujilite/targets/39628368387245557,39628368404022902",  # Works
 ]
 
+cursed_endpoints = [
+
+    "zcat/download/fujilite/targets/3962836838,75",  # Should fail
+]
+
 zcat_plot_endpoints = [
     "zcat/plot/fujilite/radec/210.9,24.8,180",
     "zcat/plot/fujilite/tile/80858/600,900,1000",
@@ -230,6 +235,7 @@ def test_fujilite_filegen():
 
 if __name__ == "__main__":
     # test_fujilite(spectra_plot_endpoints)
+    # test_fujilite(cursed_endpoints)
     test_fujilite(fujilite_endpoints)
     test_fujilite(zcat_plot_endpoints)
 # test_fujilite(filter_endpoints)

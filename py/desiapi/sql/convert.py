@@ -89,7 +89,6 @@ def dataframe_to_sql(
 
 
 
-
 # Other way around
 def sql_to_astropy(sqlite_file: str, columns=[]) -> Table:
     connection = sqlite3.connect(sqlite_file)

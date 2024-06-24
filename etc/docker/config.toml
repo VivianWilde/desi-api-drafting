@@ -3,6 +3,6 @@
 [cache]
 path= "~/tmp/desi-api-cache"
 # How old must a cached response be before we discard it, in minutes
-max_age = 60
+max_age = 0
 # How large the cache is allowed to get
 max_size = '1gb'

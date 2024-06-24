@@ -28,7 +28,9 @@ def get_config_location():
 def main():
     args = parser.parse_intermixed_args()
     config_file = get_config_location()
+    print(config_file)
     config = utils.get_config_map(config_file)
+    print(config)
     if args.command == "server":
         run_app(config)
     elif args.command == "clean_cache":

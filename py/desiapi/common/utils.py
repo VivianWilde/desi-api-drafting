@@ -4,8 +4,10 @@ import os
 import tomllib
 import datetime as dt
 from typing import Any, Callable, List
+import numpy as np
 
 
+# File helpers
 def mimetype(path: str) -> str:
     """Returns the extension of the file"""
     return os.path.splitext(path)[1].lower()
@@ -20,7 +22,21 @@ def basename(path: str):
     """Return the file name without extension or path info"""
     return os.path.splitext(path)[0].split(".")[0]
 
+def list_directories(path: str)-> List[str]:
+    return next(os.walk(path))[1]
 
+def is_nonempty(path: str) -> bool:
+    return os.path.exists(path) and (os.path.getsize(path) > 0)
+
+
+def is_empty(path: str) -> bool:
+    return not is_nonempty(path)
+
+
+def expand_path(path: str) -> str:
+    return os.path.expanduser(os.path.expandvars(path))
+
+# Parsing params
 def build_list_parser(func: Callable[[str], Any]) -> Callable[[str], List[Any]]:
     """Returns a func that takes in a string representing a comma-separated list of integers or floats (no spaces) and returns the list"""
     return lambda s: [func(i) for i in s.split(",")]
@@ -38,6 +54,7 @@ def log(*args):
     print("LOG INFO:", *args)
 
 
+# Config and Cache Helpers
 def get_config_map(CONFIG_FILE: str) -> dict:
     """Read in values from the toml CONFIG_FILE, and expand paths."""
 
@@ -72,13 +89,11 @@ def get_max_cache_size(cache_size: str) -> int:
     return get_bytes(size, suffix)
 
 
-def is_nonempty(path: str) -> bool:
-    return os.path.exists(path) and (os.path.getsize(path) > 0)
+# Permutation Logic (For ensuring we return data in the order requested)
+# Permutations are numpy arrays of small integers, so that ARR[PERM] applies PERM to ARR
 
-
-def is_empty(path: str) -> bool:
-    return not is_nonempty(path)
-
-
-def expand_path(path: str) -> str:
-    return os.path.expanduser(os.path.expandvars(path))
+def invert(permutation):
+    inverse = np.zeros(permutation.shape, dtype=int)
+    for i,v in enumerate(permutation):
+        inverse[v]=i
+    return inverse

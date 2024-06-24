@@ -15,6 +15,10 @@ RUN mkdir -p /desi/spectro \
   && git clone https://github.com/desihub/redrock-templates \
   && curl  https://raw.githubusercontent.com/desihub/redrock-templates/0.7.2/rrtemplate-qso.fits -o redrock-templates/rrtemplate-qso.fits
 
+#
+RUN apt-get install vim -y
+# Thank me when you have to debug a running container.
+
 #- when launching the container, mount an external directory to /desi/spectro/redux
 ENV DESI_ROOT=/desi
 ENV DESI_SPECTRO_REDUX=/desi/spectro/redux
