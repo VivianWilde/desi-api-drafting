@@ -14,6 +14,8 @@ import math
 SQL_DIR = os.path.expandvars("$SCRATCH/sql")
 COEFF_COLUMN = "COEFF"
 
+COLS = ["TARGETID", "TILEID", "FIBER", "SURVEY", "PROGRAM", "ZCAT_PRIMARY", "TARGET_RA", "TARGET_DEC"]
+
 
 def filename(path: str) -> str:
     """Return the file name and extension (no path info)"""
@@ -23,6 +25,7 @@ def filename(path: str) -> str:
 def basename(path: str):
     """Return the file name without extension or path info"""
     return os.path.splitext(path)[0].split(".")[0]
+
 
 
 def astropy_to_sql(fits_file: str) -> int | None:
@@ -209,7 +212,7 @@ def to_sql():
 
 def from_sql():
     sql_file = get_sql_file_path(tablename_from_filename(FITS_FILE))
-    return sql_to_numpy(sql_file, columns=[])
+    return sql_to_numpy(sql_file, columns=COLS)
 
 
 if __name__ == "__main__":
