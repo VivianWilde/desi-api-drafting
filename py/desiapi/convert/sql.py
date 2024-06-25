@@ -45,7 +45,7 @@ def numpy_to_sql(fits_file: str):
     table_name = tablename_from_filename(fits_file)
     sql_file = get_sql_file_path(table_name)
     engine = setup_db(sql_file)
-    array = fitsio.read(fits_file)
+    array = fitsio.read(fits_file, columns=COLS)
     print("read", dt.datetime.now())
     df = numpy_to_dataframe(array)
     print("dataframed!", dt.datetime.now())
@@ -217,7 +217,7 @@ def from_sql():
 
 if __name__ == "__main__":
     print(dt.datetime.now())
-    #orig = fitsio.read(FITS_FILE)
+    orig = fitsio.read(FITS_FILE, columns=COLS)
     #print("read orig", dt.datetime.now())
     new=from_sql()
     print("read sql", dt.datetime.now())

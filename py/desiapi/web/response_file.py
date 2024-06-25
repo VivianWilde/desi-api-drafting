@@ -105,6 +105,7 @@ def zcat_to_json_str(zcat: Zcatalog) -> str:
     """Jsonify the data in the Zcatalog object ZCAT and return the raw Json data."""
 
     keys = zcat.dtype.names
+    log("zcat", zcat["TARGETID"])
     return json.dumps([dict(zip(keys, record)) for record in zcat], cls=NumpyEncoder)
 
 
@@ -146,11 +147,14 @@ def zcat_to_html(req: ApiRequest, zcat: Zcatalog, save_dir: str, file_name: str)
     """
 
     html_file = f"{save_dir}/{file_name}.html"
-    json_data = zcat_to_json_str(zcat)
+    json_data = json.loads(zcat_to_json_str(zcat))
+    for record in json_data:
+        record["TARGETID"]=str(record["TARGETID"])
+    json_str = json.dumps(json_data)
     with open(html_file, "w") as out:
         out.write(
             render_template(
-                "table.html", columns=zcat.dtype.names, json_data=json_data, request=req
+                "table.html", columns=zcat.dtype.names, json_data=json_str, request=req
             )
         )
     return html_file

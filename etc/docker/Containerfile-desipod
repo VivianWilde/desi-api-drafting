@@ -16,7 +16,7 @@ RUN mkdir -p /desi/spectro \
   && curl  https://raw.githubusercontent.com/desihub/redrock-templates/0.7.2/rrtemplate-qso.fits -o redrock-templates/rrtemplate-qso.fits
 
 #
-RUN apt-get install vim -y
+RUN apt-get install neovim -y
 # Thank me when you have to debug a running container.
 
 #- when launching the container, mount an external directory to /desi/spectro/redux
