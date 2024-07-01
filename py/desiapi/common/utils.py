@@ -22,8 +22,11 @@ def basename(path: str):
     """Return the file name without extension or path info"""
     return os.path.splitext(path)[0].split(".")[0]
 
-def list_directories(path: str)-> List[str]:
-    return next(os.walk(path))[1]
+
+def list_directories(path: str) -> List[str]:
+    # return next(os.walk(path))[1]
+    return [f.name for f in os.scandir(path) if f.is_dir()]
+
 
 def is_nonempty(path: str) -> bool:
     return os.path.exists(path) and (os.path.getsize(path) > 0)
@@ -35,6 +38,7 @@ def is_empty(path: str) -> bool:
 
 def expand_path(path: str) -> str:
     return os.path.expanduser(os.path.expandvars(path))
+
 
 # Parsing params
 def build_list_parser(func: Callable[[str], Any]) -> Callable[[str], List[Any]]:
@@ -92,8 +96,9 @@ def get_max_cache_size(cache_size: str) -> int:
 # Permutation Logic (For ensuring we return data in the order requested)
 # Permutations are numpy arrays of small integers, so that ARR[PERM] applies PERM to ARR
 
+
 def invert(permutation):
     inverse = np.zeros(permutation.shape, dtype=int)
-    for i,v in enumerate(permutation):
-        inverse[v]=i
+    for i, v in enumerate(permutation):
+        inverse[v] = i
     return inverse

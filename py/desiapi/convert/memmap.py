@@ -52,7 +52,11 @@ def read_memmap(numpy_file: str, dtype_file: str, desired_columns: List[str]):
 
 
 
-def test_run():
+def main():
+    create_memmaps("jura")
+    create_memmaps("fuji")
+
+if __name__ == "__main__":
     logger.info("starting")
     orig = fitsio.read(FITS_FILE, columns=COLS)
     logger.info("read fits")
@@ -69,8 +73,4 @@ def test_run():
     read = np.memmap(outfile, mode="r", dtype=read_dtype)
     print(read.dtype.fields)
     print(read.shape)
-    print(read["TARGETID"])
     logger.info("read numpy")
-
-if __name__ == "__main__":
-    create_memmaps(sys.argv[1])
