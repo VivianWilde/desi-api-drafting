@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 from typing import List, Mapping, Tuple
+
 from .utils import list_directories
 
 from numpy import ndarray
@@ -23,6 +24,8 @@ Zcatalog = Table
 Clause = List[bool]  # A boolean mask, used in filtering Zcatalogs
 Spectra = DesiSpectra
 
+MEMMAP_DIR = os.path.expandvars("$SCRATCH/memmap")
+DTYPES_DIR = os.path.expandvars("$SCRATCH/dtypes")
 SPECTRO_REDUX = os.getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
 DEFAULT_CONF = "/config/default.toml"
@@ -32,6 +35,17 @@ DEFAULT_FILETYPE = "json"  # The default filetype for zcat files
 SPECIAL_QUERY_PARAMS = [
     "filetype"
 ]  # Query params that don't correspond to data filters
+
+DESIRED_COLUMNS = [
+    "TARGETID",
+    "SURVEY",
+    "PROGRAM",
+    "ZCAT_PRIMARY",
+    "TARGET_RA",
+    "TARGET_DEC",
+]
+DESIRED_COLUMNS_TILE = DESIRED_COLUMNS + ["TILEID","FIBER"]
+DESIRED_COLUMNS_TARGET = DESIRED_COLUMNS + ["HEALPIX"]
 
 
 def canonise_release_name(release: str) -> str:
@@ -214,35 +228,41 @@ class DataRelease:
     def __init__(self, name: str) -> None:
         self.name = name.lower()
         self.directory = f"{SPECTRO_REDUX}/{self.name}"
-        self.tile_fits = (
-            f"{self.zcat_dir}/zall-tilecumulative-{self.name}.fits"
-        )
+        self.tile_fits = f"{self.zcat_dir}/zall-tilecumulative-{self.name}.fits"
         self.tile_dir = f"{self.directory}/tiles/cumulative"
         self.healpix_fits = f"{self.zcat_dir}/zall-pix-{self.name}.fits"
         # self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
 
     @property
-    def zcat_dir(self)->str:
+    def zcat_dir(self) -> str:
         guess = f"{self.directory}/zcatalog"
-        if os.path.exists(f"{guess}/zall-pix-{self.name}.fits") and os.path.exists(f"{guess}/zall-tilecumulative-{self.name}.fits"):
+        if os.path.exists(f"{guess}/zall-pix-{self.name}.fits") and os.path.exists(
+            f"{guess}/zall-tilecumulative-{self.name}.fits"
+        ):
             return guess
         else:
             dirs = list_directories(guess)
-            versions = [int(d.replace("v","")) for d in dirs]
+            versions = [int(d.replace("v", "")) for d in dirs]
             latest = max(versions)
             return f"{guess}/v{latest}"
 
-
-
-
-        
-
-
     # FIXME hardcoded because I hate it here.
     @property
-    def tile_sql(self) -> str:
-        return "/home/vivien/drive/work/urap/sql/zall_tilecumulative_fujilite.sqlite"
+    def tile_memmap(self) -> str:
+        return os.path.expandvars(
+            f"{MEMMAP_DIR}/zall-tilecumulative-{self.name}.npy"
+        )
 
     @property
-    def healpix_sql(self) -> str:
-        return "/home/vivien/drive/work/urap/sql/zall_pix_fujilite.sqlite"
+    def tile_dtype(self) -> str:
+        return os.path.expandvars(
+            f"{DTYPES_DIR}/zall-tilecumulative-{self.name}.pickle"
+        )
+
+    @property
+    def healpix_memmap(self) -> str:
+        return os.path.expandvars(f"{MEMMAP_DIR}/zall-pix-{self.name}.npy")
+
+    @property
+    def healpix_dtype(self) -> str:
+        return os.path.expandvars(f"{DTYPES_DIR}/zall-pix-{self.name}.pickle")

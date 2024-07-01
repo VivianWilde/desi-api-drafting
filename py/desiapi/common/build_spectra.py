@@ -12,7 +12,8 @@ from astropy.table import Table, vstack
 from .models import *
 from .utils import log, invert
 from .errors import DataNotFoundException, MalformedRequestException, SqlException
-from ..sql import convert as sqlconvert
+# from ..sql import convert as sqlconvert
+from ..convert import memmap 
 
 
 # Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
@@ -165,23 +166,14 @@ def get_radec_zcatalog(
 def get_tile_zcatalog(
     release: DataRelease, tile: int, fibers: List[int], filters: Filter
 ):
-    desired_columns = [
-        "TARGETID",
-        "TILEID",
-        "FIBER",
-        "SURVEY",
-        "PROGRAM",
-        "ZCAT_PRIMARY",
-        "TARGET_RA",
-        "TARGET_DEC",
-    ]
+    desired_columns = DESIRED_COLUMNS[:]
     for k in filters.keys():
         desired_columns.append(k)
 
         # TODO: SQL stuff
     try:
         zcatalog = unfiltered_zcatalog(
-            release.tile_sql, release.tile_fits, desired_columns
+            release.tile_memmap, release.tile_dtype, release.tile_fits, desired_columns
         )
     except Exception as e:
         raise DataNotFoundException("unable to read tile information")
@@ -200,15 +192,7 @@ def get_target_zcatalog(
     :param target_ids: The list of target identifiers to build objects for. If this list is empty, blindly reads all targets
     :returns: A list of target objects, each containing metadata for a target with a specified target_id
     """
-    desired_columns = [
-        "TARGETID",
-        "HEALPIX",
-        "SURVEY",
-        "PROGRAM",
-        "ZCAT_PRIMARY",
-        "TARGET_RA",
-        "TARGET_DEC",
-    ]
+    desired_columns = DESIRED_COLUMNS[:]
 
     # Also read in metadata we want to filter on
     for k in filters.keys():
@@ -217,7 +201,7 @@ def get_target_zcatalog(
 
     try:
         zcatalog = unfiltered_zcatalog(
-            release.healpix_sql, release.healpix_fits, desired_columns
+            release.healpix_memmap, release.healpix_dtype, release.healpix_fits, desired_columns
         )
     except:
         raise DataNotFoundException("unable to read target information")
@@ -241,8 +225,8 @@ def get_target_zcatalog(
     return filter_zcatalog(zcatalog, filters)
 
 
-def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str]):
-    """Attempt to read zcat info from the sqlite file, else fall back to fits file
+def unfiltered_zcatalog(numpy_file: str, dtype_file: str, fits_file: str, desired_columns: List[str]):
+    """Attempt to read zcat info from the memory-mapped numpy file, else fall back to fits file
 
     :param fits_file:
     :param sql_file:
@@ -252,8 +236,9 @@ def unfiltered_zcatalog(sql_file: str, fits_file: str, desired_columns: List[str
     """
 
     try:
-        log("reading zcatalog info from", sql_file)
-        zcatalog = sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
+        log("reading zcatalog info from", numpy_file)
+        # zcatalog = sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
+        return memmap.read_memmap(numpy_file, dtype_file, desired_columns)
         # log("zcatalog: ", zcatalog)
     except Exception as e:
         # log(e)
