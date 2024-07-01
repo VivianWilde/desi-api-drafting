@@ -1,4 +1,4 @@
-import os
+import os,sys
 import fitsio
 import datetime as dt
 import numpy as np
@@ -73,4 +73,4 @@ def test_run():
     logger.info("read numpy")
 
 if __name__ == "__main__":
-    create_memmaps("fujilite")
+    create_memmaps(sys.argv[1])
