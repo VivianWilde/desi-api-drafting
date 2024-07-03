@@ -105,7 +105,6 @@ def zcat_to_json_str(zcat: Zcatalog) -> str:
     """Jsonify the data in the Zcatalog object ZCAT and return the raw Json data."""
 
     keys = zcat.dtype.names
-    log("zcat", zcat["TARGETID"])
     return json.dumps([dict(zip(keys, record)) for record in zcat], cls=NumpyEncoder)
 
 

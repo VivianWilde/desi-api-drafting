@@ -12,8 +12,9 @@ from astropy.table import Table, vstack
 from .models import *
 from .utils import log, invert
 from .errors import DataNotFoundException, MalformedRequestException, SqlException
+
 # from ..sql import convert as sqlconvert
-from ..convert import memmap 
+from ..convert import memmap
 
 
 # Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
@@ -32,7 +33,6 @@ def handle_spectra(req: ApiRequest) -> Spectra:
 
     canonised = canonise_release_name(req.release)
     release = DataRelease(canonised)
-    log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
         return get_tile_spectra(release, params.tile, params.fibers, req.filters)
@@ -56,7 +56,6 @@ def handle_zcatalog(req: ApiRequest) -> Zcatalog:
 
     canonised = canonise_release_name(req.release)
     release = DataRelease(canonised)
-    log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
         return get_tile_zcatalog(release, params.tile, params.fibers, req.filters)
@@ -102,7 +101,6 @@ def get_tile_spectra(
     folder = f"{release.tile_dir}/{tile}"
     log("reading tile info from: ", folder)
     latest = max(os.listdir(folder))
-    log(latest)
 
     try:
         spectra = desispec.io.read_tile_spectra(
@@ -177,6 +175,7 @@ def get_tile_zcatalog(
         )
     except Exception as e:
         raise DataNotFoundException("unable to read tile information")
+    log("read unfiltered zcatalog")
     keep = (zcatalog["TILEID"] == tile) & np.isin(zcatalog["FIBER"], fibers)
     zcatalog = zcatalog[keep]
     return filter_zcatalog(zcatalog, filters)
@@ -201,11 +200,14 @@ def get_target_zcatalog(
 
     try:
         zcatalog = unfiltered_zcatalog(
-            release.healpix_memmap, release.healpix_dtype, release.healpix_fits, desired_columns
+            release.healpix_memmap,
+            release.healpix_dtype,
+            release.healpix_fits,
+            desired_columns,
         )
     except:
         raise DataNotFoundException("unable to read target information")
-
+    log("computing keep indices")
     keep = (
         ((zcatalog["ZCAT_PRIMARY"] == True) & np.isin(zcatalog["TARGETID"], target_ids))
         if len(target_ids)
@@ -213,19 +215,25 @@ def get_target_zcatalog(
     )
 
     zcatalog = zcatalog[keep]
+    log("computed keep indices")
 
     # Check for missing IDs
-    missing_ids = []
-    found_ids = set(zcatalog["TARGETID"])
-    for i in target_ids:
-        if i not in found_ids:
-            missing_ids.append(i)
-    if len(missing_ids):
-        raise DataNotFoundException("unable to find targets:", target_ids)
+    # missing_ids = []
+    # found_ids = set(zcatalog["TARGETID"])
+    # for i in target_ids:
+    #     if i not in found_ids:
+    #         missing_ids.append(i)
+    # if len(missing_ids):
+    #     raise DataNotFoundException("unable to find targets:", target_ids)
     return filter_zcatalog(zcatalog, filters)
 
 
-def unfiltered_zcatalog(numpy_file: str, dtype_file: str, fits_file: str, desired_columns: List[str]):
+def unfiltered_zcatalog(
+    numpy_file: str,
+    dtype_file: str,
+    fits_file: str,
+    desired_columns: List[str],
+):
     """Attempt to read zcat info from the memory-mapped numpy file, else fall back to fits file
 
     :param fits_file:
@@ -234,27 +242,35 @@ def unfiltered_zcatalog(numpy_file: str, dtype_file: str, fits_file: str, desire
     :returns:
 
     """
-
+    # This call should rely on the preloaded cache
+    log("reading unfiltered zcatalog")
+    preloaded = memmap.preload_memmaps(PRELOAD_RELEASES)
+    # log("preloaded", preloaded)
+    # log(numpy_file)
+    if numpy_file in preloaded.keys(): # TODO remove the second clause
+        log("used preloaded")
+        log(memmap.preload_memmaps.cache_info())
+        return preloaded.get(numpy_file)
     try:
         log("reading zcatalog info from", numpy_file)
         # zcatalog = sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
-        return memmap.read_memmap(numpy_file, dtype_file, desired_columns)
+        return memmap.read_memmap(numpy_file, dtype_file)
         # log("zcatalog: ", zcatalog)
     except Exception as e:
-        # log(e)
-        log("reading zcatalog info from: ", fits_file)
-        return fitsio.read(
-            fits_file,
-            "ZCATALOG",
-            columns=desired_columns,
-        )
-    # FitsIO errors are caught by the calling get_target_zcatalog
+        log(e)
+    log("reading zcatalog info from: ", fits_file)
+    return fitsio.read(
+        fits_file,
+        "ZCATALOG",
+        columns=desired_columns,
+    )
+
+
+# FitsIO errors are caught by the calling get_target_zcatalog
 
 
 # TODO needs a better name
-def get_populated_target_spectra(
-    release: DataRelease, targets: Zcatalog
-) -> Spectra:
+def get_populated_target_spectra(release: DataRelease, targets: Zcatalog) -> Spectra:
     """
     Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list.
 
@@ -273,15 +289,17 @@ def get_populated_target_spectra(
             healpix=target["HEALPIX"],
             specprod_dir=release.directory,
         )
-        redrock_to_targets[redrock_file] = redrock_to_targets.get(redrock_file, [])+[target["TARGETID"]]
+        redrock_to_targets[redrock_file] = redrock_to_targets.get(redrock_file, []) + [
+            target["TARGETID"]
+        ]
     zcatalog = Table.read(redrock_file, "REDSHIFTS")
-    zcatalog.remove_rows(slice(0,len(zcatalog)))
-    total_kept=0
+    zcatalog.remove_rows(slice(0, len(zcatalog)))
+    total_kept = 0
     for redrock, redrock_targets in redrock_to_targets.items():
         new = Table.read(redrock, "REDSHIFTS")
         keep = np.isin(new["TARGETID"], redrock_targets)
         new = new[keep]
-        zcatalog = vstack([zcatalog,new])
+        zcatalog = vstack([zcatalog, new])
         total_kept += len(new)
     zcatalog = sort_zcat(zcatalog, targets)
     target_spectra.extra_catalog = zcatalog
@@ -336,7 +354,9 @@ def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
     :returns:
 
     """
-
+    # Speed trick for when there are no filters
+    if filters == dict():
+        return zcatalog
     filtered_keep = np.full(zcatalog.shape, True, dtype=bool)
     for k, v in filters.items():
         if k in SPECIAL_QUERY_PARAMS:
@@ -345,7 +365,6 @@ def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
             clause = clause_from_filter(k, v, zcatalog)
             filtered_keep = np.logical_and(filtered_keep, clause)
     return zcatalog[filtered_keep]
-
 
 
 # Permutation Functions

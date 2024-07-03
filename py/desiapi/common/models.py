@@ -24,7 +24,9 @@ Zcatalog = Table
 Clause = List[bool]  # A boolean mask, used in filtering Zcatalogs
 Spectra = DesiSpectra
 
-MEMMAP_DIR = os.path.expandvars("$SCRATCH/memmap")
+PRELOAD_RELEASES = ("jura", "iron")
+# PRELOAD_RELEASES = ("fujilite",)
+MEMMAP_DIR = os.path.expandvars("$SCRATCH/memmap") # FIXME shouldn't be scratch
 DTYPES_DIR = os.path.expandvars("$SCRATCH/dtypes")
 SPECTRO_REDUX = os.getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache

@@ -5,6 +5,9 @@ import tomllib
 import datetime as dt
 from typing import Any, Callable, List
 import numpy as np
+import logging
+
+
 
 
 # File helpers
@@ -50,12 +53,15 @@ parse_list_int = build_list_parser(int)
 parse_list_float = build_list_parser(float)
 
 
+logging.basicConfig(format="%(asctime)s: %(message)s")
+logger = logging.getLogger("desi_api")
+logger.setLevel(logging.INFO)
 def log(*args):
     """Designed as a placeholder, will replace with more"""
     # logger = get_logger()
     # logger.info(*args)
 
-    print("LOG INFO:", *args)
+    logger.info(str(args))
 
 
 # Config and Cache Helpers

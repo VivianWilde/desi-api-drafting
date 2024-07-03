@@ -7,6 +7,8 @@ from typing import List
 from flask import Flask, Response, abort, redirect, request, send_file
 from json import loads
 
+from ..convert.memmap import preload_memmaps
+
 from ..common.errors import DesiApiException, MalformedRequestException
 from ..common.models import *
 from ..common.utils import *
@@ -48,7 +50,6 @@ def handle_get(
     :param params: Endpoint-specific parameters, such as a tile ID and list of fibers, a list of target IDs, or a (ra, dec) point and radius.
     :returns: None, but either renders HTML or sends a file as a response.
     """
-    log("params: ", endpoint_params)
     try:
         req = build_request(
             requested_data,
@@ -75,7 +76,6 @@ def handle_post():
     # TODO: Handle sensible ways to do paths for params, so no <tileid>/<fiberids>
     data = loads(request.json)
     log("request: ", data)
-    log("params: ", data["params"])
     param_keys = ["requested_data", "response_type", "release", "endpoint", "params"]
     filters = {k: v for (k, v) in data.items() if k not in param_keys}
     try:
@@ -184,14 +184,14 @@ def exec_request(req: ApiRequest) -> Response:
     :returns: An HTML or FITS file wrapped in Flask's send_file function.
     """
     req_time = dt.datetime.now()
-    log("request: ", req)
+    log("request: ", req.__repr__())
     response_file = build_response(
         req,
         req_time,
         cache_root=app.config["cache"]["path"],
         cache_max_age=app.config["cache"]["max_age"],
     )
-    log("response file: ", response_file)
+    # log("response file: ", response_file)
 
     if mimetype(response_file) == ".html":
         return send_file(response_file)
@@ -282,6 +282,8 @@ def run_app(config: dict):
 
     """
     app.config.update(config)
+    # Doesn't save the results anywhere, but calling it should cause the value to be cached if functools does its job
+    preload_memmaps(PRELOAD_RELEASES)
     app.run(host="0.0.0", debug=True)
 
 
