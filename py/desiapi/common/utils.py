@@ -23,7 +23,7 @@ def filename(path: str) -> str:
 
 def basename(path: str):
     """Return the file name without extension or path info"""
-    return os.path.splitext(path)[0].split(".")[0]
+    return os.path.splitext(filename(path))[0].split(".")[0]
 
 
 def list_directories(path: str) -> List[str]:
@@ -70,7 +70,6 @@ def get_config_map(CONFIG_FILE: str) -> dict:
 
     with open(CONFIG_FILE, "rb") as conf:
         CONFIG = tomllib.load(conf)
-
         # for k in CONFIG["paths"]:
         #     CONFIG["paths"][k]=os.path.expandvars(CONFIG["paths"][k])
         CONFIG["cache"]["path"] = expand_path(CONFIG["cache"]["path"])

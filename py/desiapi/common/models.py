@@ -24,9 +24,10 @@ Zcatalog = Table
 Clause = List[bool]  # A boolean mask, used in filtering Zcatalogs
 Spectra = DesiSpectra
 
-PRELOAD_RELEASES = ("jura", "iron")
+PRELOAD_RELEASES = ("fujilite", "jura", "iron")
 # PRELOAD_RELEASES = ("fujilite",)
 MEMMAP_DIR = os.path.expandvars("$SCRATCH/memmap") # FIXME shouldn't be scratch
+HDF5_DIR = os.path.expandvars("$SCRATCH/hdf5")
 DTYPES_DIR = os.path.expandvars("$SCRATCH/dtypes")
 SPECTRO_REDUX = os.getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
@@ -45,6 +46,7 @@ DESIRED_COLUMNS = [
     "ZCAT_PRIMARY",
     "TARGET_RA",
     "TARGET_DEC",
+    # "COEFF"
 ]
 DESIRED_COLUMNS_TILE = DESIRED_COLUMNS + ["TILEID","FIBER"]
 DESIRED_COLUMNS_TARGET = DESIRED_COLUMNS + ["HEALPIX"]
@@ -230,9 +232,14 @@ class DataRelease:
     def __init__(self, name: str) -> None:
         self.name = name.lower()
         self.directory = f"{SPECTRO_REDUX}/{self.name}"
+
         self.tile_fits = f"{self.zcat_dir}/zall-tilecumulative-{self.name}.fits"
         self.tile_dir = f"{self.directory}/tiles/cumulative"
+
         self.healpix_fits = f"{self.zcat_dir}/zall-pix-{self.name}.fits"
+
+        self.healpix_hdf5 = f"{HDF5_DIR}/zall-pix-{self.name}.hdf5"
+        self.tile_hdf5 = f"{HDF5_DIR}/zall-tilecumulative-{self.name}.hdf5"
         # self.sqlite_file = f"{SQL_DIR}/{self.name}.sqlite"
 
     @property
@@ -248,7 +255,6 @@ class DataRelease:
             latest = max(versions)
             return f"{guess}/v{latest}"
 
-    # FIXME hardcoded because I hate it here.
     @property
     def tile_memmap(self) -> str:
         return os.path.expandvars(

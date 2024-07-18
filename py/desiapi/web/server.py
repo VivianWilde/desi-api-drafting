@@ -7,7 +7,7 @@ from typing import List
 from flask import Flask, Response, abort, redirect, request, send_file
 from json import loads
 
-from ..convert.memmap import preload_memmaps
+from ..convert.memmap import preload_fits, preload_memmaps
 
 from ..common.errors import DesiApiException, MalformedRequestException
 from ..common.models import *
@@ -200,7 +200,7 @@ def exec_request(req: ApiRequest) -> Response:
         requested_data = req.requested_data.name.lower()
         return send_file(
             response_file,
-            download_name=f"desi_api_{req_time.isoformat()}.{requested_data}.{ext}",  # .spectra.fits or .zcat.fits
+            download_name=f"desi_api_{req_time.isoformat()}.{requested_data}{ext}",  # .spectra.fits or .zcat.fits
         )
 
 
@@ -283,7 +283,9 @@ def run_app(config: dict):
     """
     app.config.update(config)
     # Doesn't save the results anywhere, but calling it should cause the value to be cached if functools does its job
-    preload_memmaps(PRELOAD_RELEASES)
+    preloads = app.config["preload_releases"]
+    # preload_memmaps(preloads)
+    # preload_fits(preloads)
     app.run(host="0.0.0", debug=True)
 
 

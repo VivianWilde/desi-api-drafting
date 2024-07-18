@@ -7,15 +7,15 @@ import desispec.io
 import desispec.spectra
 import fitsio
 import numpy as np
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 
-from .models import *
-from .utils import log, invert
-from .errors import DataNotFoundException, MalformedRequestException, SqlException
-
 # from ..sql import convert as sqlconvert
-from ..convert import memmap
-
+from ..convert import hdf5, memmap
+from .errors import DataNotFoundException, MalformedRequestException, SqlException
+from .models import *
+from .utils import invert, log
 
 # Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
 # Use types rigorously. I have learned that they are good.
@@ -137,7 +137,7 @@ def get_target_spectra(
     """
 
     target_objects = get_target_zcatalog(release, target_ids, filters)
-    return desispec.spectra.stack(get_populated_target_spectra(release, target_objects))
+    return get_populated_target_spectra(release, target_objects)
 
 
 def get_radec_zcatalog(
@@ -154,24 +154,32 @@ def get_radec_zcatalog(
 
     """
     targets = get_target_zcatalog(release, filters=filters)
+    print(targets.dtype)
+    ctargets = SkyCoord(
+        targets["TARGET_RA"] * u.degree, targets["TARGET_DEC"] * u.degree
+    )
+    center = SkyCoord(ra * u.degree, dec * u.degree)
 
-    distfilter = (ra - targets["TARGET_RA"]) ** 2 + (
-        dec - targets["TARGET_DEC"]
-    ) ** 2 <= radius
-    return targets[distfilter]
+    ii = center.separation(ctargets) <= radius * u.degree
+
+    return targets[ii]
 
 
 def get_tile_zcatalog(
     release: DataRelease, tile: int, fibers: List[int], filters: Filter
 ):
-    desired_columns = DESIRED_COLUMNS[:]
+    desired_columns = DESIRED_COLUMNS_TILE[:]
     for k in filters.keys():
         desired_columns.append(k)
 
         # TODO: SQL stuff
     try:
         zcatalog = unfiltered_zcatalog(
-            release.tile_memmap, release.tile_dtype, release.tile_fits, desired_columns
+            desired_columns,
+            release.tile_memmap,
+            release.tile_dtype,
+            release.tile_fits,
+            release.tile_hdf5,
         )
     except Exception as e:
         raise DataNotFoundException("unable to read tile information")
@@ -191,7 +199,7 @@ def get_target_zcatalog(
     :param target_ids: The list of target identifiers to build objects for. If this list is empty, blindly reads all targets
     :returns: A list of target objects, each containing metadata for a target with a specified target_id
     """
-    desired_columns = DESIRED_COLUMNS[:]
+    desired_columns = DESIRED_COLUMNS_TARGET[:]
 
     # Also read in metadata we want to filter on
     for k in filters.keys():
@@ -200,12 +208,15 @@ def get_target_zcatalog(
 
     try:
         zcatalog = unfiltered_zcatalog(
+            desired_columns,
             release.healpix_memmap,
             release.healpix_dtype,
             release.healpix_fits,
-            desired_columns,
+            release.healpix_hdf5,
         )
-    except:
+
+    except Exception as e:
+        log(e)
         raise DataNotFoundException("unable to read target information")
     log("computing keep indices")
     keep = (
@@ -218,21 +229,22 @@ def get_target_zcatalog(
     log("computed keep indices")
 
     # Check for missing IDs
-    # missing_ids = []
-    # found_ids = set(zcatalog["TARGETID"])
-    # for i in target_ids:
-    #     if i not in found_ids:
-    #         missing_ids.append(i)
-    # if len(missing_ids):
-    #     raise DataNotFoundException("unable to find targets:", target_ids)
+    missing_ids = []
+    found_ids = set(zcatalog["TARGETID"])
+    for i in target_ids:
+        if i not in found_ids:
+            missing_ids.append(i)
+    if len(missing_ids):
+        raise DataNotFoundException("unable to find targets:", target_ids)
     return filter_zcatalog(zcatalog, filters)
 
 
 def unfiltered_zcatalog(
+    desired_columns: List[str],
     numpy_file: str,
     dtype_file: str,
     fits_file: str,
-    desired_columns: List[str],
+    hdf5_file: str,
 ):
     """Attempt to read zcat info from the memory-mapped numpy file, else fall back to fits file
 
@@ -242,22 +254,33 @@ def unfiltered_zcatalog(
     :returns:
 
     """
+    # log("reading unfiltered zcatalog")
+
+    try:
+        log("reading zcatalog info from", hdf5_file)
+        return hdf5.from_hdf5_datasets(hdf5_file, desired_columns)
+    except Exception as e:
+        log(e)
+
     # This call should rely on the preloaded cache
-    log("reading unfiltered zcatalog")
-    preloaded = memmap.preload_memmaps(PRELOAD_RELEASES)
-    # log("preloaded", preloaded)
-    # log(numpy_file)
-    if numpy_file in preloaded.keys(): # TODO remove the second clause
-        log("used preloaded")
+    # preloaded_fits = memmap.preload_fits(PRELOAD_RELEASES)
+    # if fits_file in preloaded_fits.keys():
+    #     log("used preloaded fits")
+    #     return preloaded_fits.get(fits_file)
+
+    preloaded_memmap = memmap.preload_memmaps(PRELOAD_RELEASES)
+    if numpy_file in preloaded_memmap.keys():
+        log("used preloaded memmap")
         log(memmap.preload_memmaps.cache_info())
-        return preloaded.get(numpy_file)
+        return preloaded_memmap.get(numpy_file)
+
     try:
         log("reading zcatalog info from", numpy_file)
-        # zcatalog = sqlconvert.sql_to_numpy(sql_file, columns=desired_columns)
         return memmap.read_memmap(numpy_file, dtype_file)
         # log("zcatalog: ", zcatalog)
     except Exception as e:
         log(e)
+
     log("reading zcatalog info from: ", fits_file)
     return fitsio.read(
         fits_file,
@@ -278,8 +301,8 @@ def get_populated_target_spectra(release: DataRelease, targets: Zcatalog) -> Spe
     :param targets: A list of Target objects
     :returns: A list of Spectra objects, one for each target passed in
     """
-    redrock_to_targets = dict()
     target_spectra = desispec.io.read_spectra_parallel(targets, specprod=release.name)
+    redrock_to_targets = dict()
     for target in targets:
         redrock_file = desispec.io.findfile(
             "redrock",

@@ -52,19 +52,47 @@ def preload_memmaps(release_names: Tuple[str]):
     preloads = dict()
     for r in release_names:
         log("reading memmap for:", r)
-        release = DataRelease(r)
-        preloads[release.healpix_memmap] = read_memmap(
-            release.healpix_memmap, release.healpix_dtype
-        )
-        preloads[release.tile_memmap] = read_memmap(
-            release.tile_memmap, release.tile_dtype
-        )
+        try:
+            release = DataRelease(r)
+            preloads[release.healpix_memmap] = read_memmap(
+                release.healpix_memmap, release.healpix_dtype
+            )
+            preloads[release.tile_memmap] = read_memmap(
+                release.tile_memmap, release.tile_dtype
+            )
+        except Exception as e:
+            log(e)
+    return preloads
+
+
+@lru_cache(maxsize=1)
+def preload_fits(release_names: Tuple[str]):
+    preloads = dict()
+    for r in release_names:
+        log("reading fits for:", r)
+        try:
+            release = DataRelease(r)
+            log(release.healpix_fits)
+            log(release.tile_fits)
+            preloads[release.healpix_fits] = fitsio.read(
+                release.healpix_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TARGET
+            )
+            preloads[release.tile_fits] = fitsio.read(
+                release.tile_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TILE
+            )
+
+
+        except Exception as e:
+            log(e)
     return preloads
 
 
 def main():
     for release in PRELOAD_RELEASES:
-        create_memmap(release)
+        try:
+            create_memmap(release)
+        except FileNotFoundError as e:
+            log(e)
 
 
 def test_run():

@@ -86,7 +86,9 @@ class DesiApiClient:
                 case RequestedData.ZCAT:
                     return handle_zcatalog(req)
                 case RequestedData.SPECTRA:
-                    return handle_spectra(req)
+                    resp = handle_spectra(req)
+                    log("handled spectra")
+                    return resp
                 case _:
                     raise MalformedRequestException("Ok what the actual hell")
         except DataNotFoundException:

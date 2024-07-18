@@ -1,4 +1,4 @@
-FROM desipod:dev
+FROM desipod
 
 # RUN git clone https://github.com/VivianWilde/desi-api-drafting /cloned
 RUN mkdir -p /code

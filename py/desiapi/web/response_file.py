@@ -33,6 +33,7 @@ def build_response(
 
     if req.requested_data == RequestedData.SPECTRA:
         spectra = handle_spectra(req)
+        log("handled spectra")
         resp_file_path = create_spectra_file(
             req.response_type, spectra, cache_path, request_time.isoformat()
         )
