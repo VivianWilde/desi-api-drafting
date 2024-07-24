@@ -17,9 +17,9 @@ HDF5_DIR = os.path.expandvars("$SCRATCH/hdf5")
 FITS_FILE = os.path.expandvars(
     "$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-pix-jura.fits"
 )
-FITS_FILE = os.path.expandvars(
-    "$HOME/d/urap/data/fujilite/zcatalog/zall-pix-fujilite.fits"
-)
+# FITS_FILE = os.path.expandvars(
+#     "$HOME/d/urap/data/fujilite/zcatalog/zall-pix-fujilite.fits"
+# )
 DATASET = "zall-pix-jura"
 
 
@@ -41,7 +41,7 @@ def memmap_read(dataset, columns):
     dtype_file = f"{DTYPE_DIR}/{dataset}.pickle"
     with open(dtype_file, "rb") as f:
         dtype = pickle.load(f)
-    read = np.memmap(numpy_file, mode="r", dtype=dtype)
+    read = np.memmap(numpy_file, mode="r", dtype=dtype)[columns]
     return read
 
 
