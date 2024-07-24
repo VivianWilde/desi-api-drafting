@@ -15,11 +15,11 @@ DTYPE_DIR = os.path.expandvars("$SCRATCH/dtype")
 HDF5_DIR = os.path.expandvars("$SCRATCH/hdf5")
 
 FITS_FILE = os.path.expandvars(
-    "/dvs_ro/cfs/cdirs/desi/spectro/redux/jura/zcatalog/v1/zall-pix-jura.fits"
+    "$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-pix-jura.fits"
 )
-# FITS_FILE = os.path.expandvars(
-#     "$HOME/d/urap/data/fujilite/zcatalog/zall-pix-fujilite.fits"
-# )
+FITS_FILE = os.path.expandvars(
+    "$HOME/d/urap/data/fujilite/zcatalog/zall-pix-fujilite.fits"
+)
 DATASET = "zall-pix-jura"
 
 
