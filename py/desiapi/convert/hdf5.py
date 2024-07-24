@@ -82,10 +82,10 @@ def from_hdf5(infile: str, columns: List[str]):
 def create_hdf5(release_name: str):
     release = DataRelease(release_name)
     log(release.tile_fits)
-    tile = fitsio.read(release.tile_fits)
+    tile = fitsio.read(release.tile_fits, "ZCATALOG")
     to_hdf5_datasets(tile, release.tile_hdf5)
     log(release.healpix_fits)
-    healpix = fitsio.read(release.healpix_fits)
+    healpix = fitsio.read(release.healpix_fits, "ZCATALOG")
     to_hdf5_datasets(healpix, release.healpix_hdf5)
 
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     fits_file = os.path.expandvars(
         "/dvs_ro/cfs/cdirs/desi/spectro/redux/jura/zcatalog/v1/zall-tilecumulative-jura.fits"
     )
-    orig = fitsio.read(fits_file)
+    orig = fitsio.read(fits_file, "ZCATALOG")
     hdf5_file = os.path.expandvars("$SCRATCH/hdf5/zall-tilecumulative-jura.hdf5")
     to_hdf5_datasets(orig, hdf5_file)
     rebuilt = from_hdf5_datasets(hdf5_file, DESIRED_COLUMNS_TILE)

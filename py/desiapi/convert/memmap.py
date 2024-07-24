@@ -22,7 +22,7 @@ from ..common.utils import log
 
 def create_memmap(release_name: str):
     release = DataRelease(release_name)
-    tile = fitsio.read(release.tile_fits, columns=DESIRED_COLUMNS_TILE)
+    tile = fitsio.read(release.tile_fits, "ZCATALOG")
     with open(release.tile_dtype, "wb") as f:
         pickle.dump(tile.dtype, f)
     write = np.memmap(
@@ -30,7 +30,7 @@ def create_memmap(release_name: str):
     )
     write[:] = tile
     del write
-    healpix = fitsio.read(release.healpix_fits, columns=DESIRED_COLUMNS_TARGET)
+    healpix = fitsio.read(release.healpix_fits, "ZCATALOG")
     with open(release.healpix_dtype, "wb") as f:
         pickle.dump(healpix.dtype, f)
     write = np.memmap(
@@ -75,12 +75,9 @@ def preload_fits(release_names: Tuple[str]):
             log(release.healpix_fits)
             log(release.tile_fits)
             preloads[release.healpix_fits] = fitsio.read(
-                release.healpix_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TARGET
+                release.healpix_fits, "ZCATALOG"
             )
-            preloads[release.tile_fits] = fitsio.read(
-                release.tile_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TILE
-            )
-
+            preloads[release.tile_fits] = fitsio.read(release.tile_fits, "ZCATALOG")
 
         except Exception as e:
             log(e)
@@ -100,14 +97,14 @@ def test_run():
     logger = logging.getLogger("hdf5_converter")
     logger.setLevel(logging.INFO)
     DATASET = "zall-tilecumulative-jura"
-    # FITS_FILE = os.path.expandvars("/dvs_ro/cfs/cdirs/desi/spectro/redux/jura/zcatalog/v1/zall-tilecumulative-jura.fits")
-    FITS_FILE = os.path.expandvars(
-        "$DESIROOT/fujilite/zcatalog/zall-tilecumulative-fujilite.fits"
-    )
+    FITS_FILE = os.path.expandvars("/dvs_ro/cfs/cdirs/desi/spectro/redux/jura/zcatalog/v1/zall-pix-jura.fits")
+    # FITS_FILE = os.path.expandvars(
+    #     "$DESIROOT/fujilite/zcatalog/zall-tilecumulative-fujilite.fits"
+    # )
     outfile = f"{MEMMAP_DIR}/{DATASET}.npy"
     outfile_dtype = f"{DTYPES_DIR}/{DATASET}.pickle"
     logger.info("starting")
-    orig = fitsio.read(FITS_FILE, columns=COLS)
+    orig = fitsio.read(FITS_FILE)
     logger.info("read fits")
     with open(outfile_dtype, "wb") as f:
         pickle.dump(orig.dtype, f)
@@ -117,12 +114,12 @@ def test_run():
     print(write.shape)
     logger.info("wrote numpy")
     del write
-    with open(outfile_dtype, "rb") as f:
-        read_dtype = pickle.load(f)
-    read = np.memmap(outfile, mode="r", dtype=read_dtype)
-    print(read.dtype.fields)
-    print(read.shape)
-    logger.info("read numpy")
+    # with open(outfile_dtype, "rb") as f:
+    #     read_dtype = pickle.load(f)
+    # read = np.memmap(outfile, mode="r", dtype=read_dtype)
+    # print(read.dtype.fields)
+    # print(read.shape)
+    # logger.info("read numpy")
 
 
 if __name__ == "__main__":

@@ -268,11 +268,11 @@ def unfiltered_zcatalog(
     #     log("used preloaded fits")
     #     return preloaded_fits.get(fits_file)
 
-    preloaded_memmap = memmap.preload_memmaps(PRELOAD_RELEASES)
-    if numpy_file in preloaded_memmap.keys():
-        log("used preloaded memmap")
-        log(memmap.preload_memmaps.cache_info())
-        return preloaded_memmap.get(numpy_file)
+    # preloaded_memmap = memmap.preload_memmaps(PRELOAD_RELEASES)
+    # if numpy_file in preloaded_memmap.keys():
+    #     log("used preloaded memmap")
+    #     log(memmap.preload_memmaps.cache_info())
+    #     return preloaded_memmap.get(numpy_file)
 
     try:
         log("reading zcatalog info from", numpy_file)
