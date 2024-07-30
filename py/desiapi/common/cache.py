@@ -12,7 +12,8 @@ def check_cache(
 
     :param req:
     :param request_time:
-    :param cache_config:
+    :param cache_path: Path to the cache directory to check
+    :param max_age: Age, in minutes, beyond which a cache response is considered stale
     :returns:
 
     """
@@ -42,8 +43,8 @@ def check_cache(
 def clean_cache(cache_path: str, max_age: int):
     """Run somewhat frequently (on the order of hours/days), delete files with sufficiently old access times (cutoff is determined by the value in CACHE_CONFIG)
 
-    :returns:
-
+    :param cache_path: Path to the cache directory to check
+    :param max_age: Age, in minutes, beyond which a cache response is considered stale
     """
     log("cache path ", cache_path)
     log("max age ", max_age)
@@ -61,12 +62,13 @@ def clean_cache(cache_path: str, max_age: int):
 
 
 def emergency_clean_cache(cache_path: str, max_size: str):
-    """Run approximately every hour. If the cache directory is beyond a certain size, defined in CACHE_CONFIG, nuke it."""
+    """Run approximately every hour. If the cache directory is beyond a certain size, defined in CACHE_CONFIG, nuke it.
+
+    :param cache_path: Path to the cache directory to check
+    :param max_age: Age, in minutes, beyond which a cache response is considered stale
+    """
     cmd = f"du -s {cache_path}"
     out = subprocess.getoutput(cmd)
     size_bytes = int(out.split()[0])
     if size_bytes >= get_max_cache_size(max_size):
         shutil.rmtree(cache_path)
-
-
-# We want this to run as cron/scheduler/whatever. How do we do that?

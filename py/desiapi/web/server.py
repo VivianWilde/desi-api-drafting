@@ -7,7 +7,7 @@ from typing import List
 from flask import Flask, Response, abort, redirect, request, send_file
 from json import loads
 
-from ..convert.memmap import preload_fits, preload_memmaps
+from ..convert.memmap import preload_fits
 
 from ..common.errors import DesiApiException, MalformedRequestException
 from ..common.models import *

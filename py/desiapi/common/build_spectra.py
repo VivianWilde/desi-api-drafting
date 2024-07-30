@@ -79,11 +79,12 @@ def get_radec_spectra(
     :param ra: Right Ascension of the target point
     :param dec: Declination of the target point
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
+    :param filters: A dictionary of filters to restrict the objects retrieved
     :returns: A combined Spectra of all such objects in the data release
     """
     relevant_targets = get_radec_zcatalog(release, ra, dec, radius, filters)
     log(f"Retrieving {len(relevant_targets)} targets")
-    return get_populated_target_spectra(release, relevant_targets)
+    return get_target_spectra_from_metadata(release, relevant_targets)
     # return desispec.spectra.stack(spectra)
 
 
@@ -96,6 +97,7 @@ def get_tile_spectra(
     :param release: The data release to use as a data source
     :param tile: Index of tile to access
     :param fibers: Fibers within the tile being requested
+    :param filter: Currently ignored
     :returns: A combined Spectra containing the spectra of all specified fibers
     """
     folder = f"{release.tile_dir}/{tile}"
@@ -133,26 +135,26 @@ def get_target_spectra(
 
     :param release: The data release to use as a data source
     :param target_ids: The list of target identifiers to search for
+    :param filters: The set of filters that restricts which targets are selected
     :returns: A Spectra object combining individual spectra for all targets
     """
 
     target_objects = get_target_zcatalog(release, target_ids, filters)
-    return get_populated_target_spectra(release, target_objects)
+    return get_target_spectra_from_metadata(release, target_objects)
 
 
 def get_radec_zcatalog(
     release: DataRelease, ra: float, dec: float, radius: float, filters: Filter
 ) -> Zcatalog:
     """
-
     :param release:
     :param ra:
     :param dec:
     :param radius:
     :param filters:
     :returns:
-
     """
+    # TODO doc
     targets = get_target_zcatalog(release, filters=filters)
     print(targets.dtype)
     ctargets = SkyCoord(
@@ -166,7 +168,11 @@ def get_radec_zcatalog(
 
 
 def get_tile_zcatalog(
-    release: DataRelease, tile: int, fibers: List[int], filters: Filter
+    # TODO doc
+    release: DataRelease,
+    tile: int,
+    fibers: List[int],
+    filters: Filter,
 ):
     desired_columns = DESIRED_COLUMNS_TILE[:]
     for k in filters.keys():
@@ -190,7 +196,10 @@ def get_tile_zcatalog(
 
 
 def get_target_zcatalog(
-    release: DataRelease, target_ids: List[int] = [], filters: Filter = dict()
+    # TODO doc
+    release: DataRelease,
+    target_ids: List[int] = [],
+    filters: Filter = dict(),
 ) -> Zcatalog:
     """
     For each TARGET_ID, read the corresponding target metadata into a Target object.
@@ -245,28 +254,26 @@ def unfiltered_zcatalog(
     dtype_file: str,
     fits_file: str,
     hdf5_file: str,
-):
-    """Attempt to read zcat info from the memory-mapped numpy file, else fall back to fits file
+) -> Zcatalog:
+    """Attempt to read zcat info from several sources, starting with the most performant and falling back to other methods if necessary.
+    Order is:
+    1. Preloaded/cached data (contains a limited set of columns)
+    2. Numpy memmapped file (contains the full set of columns)
+    3. FITS file (if the other methods fail)
 
-    :param fits_file:
-    :param sql_file:
-    :param desired_columns:
+    :param desired_columns: List of columns to read from the file
+    :param numpy_file: Data file from which to read a thing
+    :param dtype_file: File containing the pickled datatype for the numpy array
+    :param fits_file: Original fits file where the data is stored
+    :param hdf5_file: TODO
     :returns:
-
     """
-    # log("reading unfiltered zcatalog")
-
-    try:
-        log("reading zcatalog info from", hdf5_file)
-        return hdf5.from_hdf5_datasets(hdf5_file, desired_columns)
-    except Exception as e:
-        log(e)
 
     # This call should rely on the preloaded cache
-    # preloaded_fits = memmap.preload_fits(PRELOAD_RELEASES)
-    # if fits_file in preloaded_fits.keys():
-    #     log("used preloaded fits")
-    #     return preloaded_fits.get(fits_file)
+    preloaded_fits = memmap.preload_fits(PRELOAD_RELEASES)
+    if fits_file in preloaded_fits.keys():
+        log("used preloaded fits")
+        return preloaded_fits.get(fits_file)
 
     # preloaded_memmap = memmap.preload_memmaps(PRELOAD_RELEASES)
     # if numpy_file in preloaded_memmap.keys():
@@ -281,6 +288,12 @@ def unfiltered_zcatalog(
     except Exception as e:
         log(e)
 
+    try:
+        log("reading zcatalog info from", hdf5_file)
+        return hdf5.from_hdf5_datasets(hdf5_file, desired_columns)
+    except Exception as e:
+        log(e)
+
     log("reading zcatalog info from: ", fits_file)
     return fitsio.read(
         fits_file,
@@ -289,13 +302,11 @@ def unfiltered_zcatalog(
     )
 
 
-# FitsIO errors are caught by the calling get_target_zcatalog
-
-
-# TODO needs a better name
-def get_populated_target_spectra(release: DataRelease, targets: Zcatalog) -> Spectra:
+def get_target_spectra_from_metadata(
+    release: DataRelease, targets: Zcatalog
+) -> Spectra:
     """
-    Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list.
+    Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list. Uses some trickery to ensure that the constructed Zcatalog has the target IDs in the original order specified
 
     :param release: The data release to use as a data source
     :param targets: A list of Target objects
@@ -332,13 +343,11 @@ def get_populated_target_spectra(release: DataRelease, targets: Zcatalog) -> Spe
 def clause_from_filter(key: str, value: str, targets: Zcatalog) -> Clause:
     """Given a column name KEY and a filter string VALUE of the form '<operation><value>' and a ZCATALOG of target metadata, create a boolean array where Arr[i] is true iff the i^th record satisfies the filter.
 
-    :param key:
-    :param value:
-    :param targets:
-    :returns:
-
+    :param key: The name of the column to filter on
+    :param value: The value of the filter, a string containing a comparison (one of >,<,=) and a value to compare against
+    :param targets: The Zcatalog data from which to filter out targets
+    :returns: A boolean mask that can be applied to the Zcatalog to remove anything that doesn't apply the filter
     """
-
     operator_fns = {
         ">": operator.gt,
         "=": operator.eq,
@@ -364,16 +373,11 @@ def clause_from_filter(key: str, value: str, targets: Zcatalog) -> Clause:
     return func(targets[key], value)
 
 
-def filter_spectra(spectra: Spectra, options: Filter) -> Spectra:
-    # TODO
-    return spectra
-
-
 def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
     """Given a collection of FILTERS of the form {column_name: "<test><value>"}, filter the ZCAT to only include records which satisfy all of those filters and return that filtered copy.
 
-    :param zcatalog:
-    :param filters:
+    :param zcatalog: TODO
+    :param filters: TODO
     :returns:
 
     """
@@ -391,7 +395,13 @@ def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
 
 
 # Permutation Functions
-def sort_zcat(zcat: Zcatalog, target_ids: Zcatalog):
+def sort_zcat(zcat: Zcatalog, target_ids: Zcatalog) -> Zcatalog:
+    """Given a Zcatalog of targets in arbitrary order, and a set of target IDs in order, reorder the entries in ZCAT according to the order of IDs in TARGET_IDs
+
+    :param zcat: Zcatalog table of targets and their metadata
+    :param target_ids: A 1-d array of target IDs, representing the desired order for the Zcatalog
+    :returns: The original Zcatalog, permuted so that the order lines up with the order of target_ids.
+    """
     sorted_zcat = np.argsort(zcat, order="TARGETID")
     sorted_input = np.argsort(target_ids)
     # zcat->sorted, and then reverse input->sorted, so we end up with zcat->sorted->input

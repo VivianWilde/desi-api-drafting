@@ -16,7 +16,13 @@ parser.add_argument(
 # parser.add_argument("-c", "--config-file", default=DEFAULT_CONF)
 
 
-def get_config_location():
+def get_config_location()->str:
+    """Figure out the location of the config file. First, read from the environment variable DESI_API_CONFIG_FILE, else use a default of /config/config.toml
+
+    :returns: Path to a config file
+
+    """
+
     from_env = os.getenv("DESI_API_CONFIG_FILE")
     expanded = utils.expand_path(from_env) if from_env else ""
     if expanded and utils.is_nonempty(expanded):

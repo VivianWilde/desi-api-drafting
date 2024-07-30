@@ -1,4 +1,3 @@
-import os, sys
 import fitsio
 import datetime as dt
 import numpy as np
@@ -6,21 +5,24 @@ import pickle
 from typing import Tuple
 from functools import lru_cache
 
-import logging
 
 from ..common.models import (
-    DESIRED_COLUMNS_TILE,
-    DESIRED_COLUMNS_TARGET,
     DataRelease,
     PRELOAD_RELEASES,
-    MEMMAP_DIR,
-    DTYPES_DIR,
+    Zcatalog,
 )
 
 from ..common.utils import log
 
 
 def create_memmap(release_name: str):
+    """Read the tilecumulative and zpix metadata for a release and create memmap
+
+    :param release_name:
+    :returns:
+
+    """
+
     release = DataRelease(release_name)
     tile = fitsio.read(release.tile_fits, "ZCATALOG")
     with open(release.tile_dtype, "wb") as f:
@@ -40,33 +42,32 @@ def create_memmap(release_name: str):
     del write
 
 
-def read_memmap(numpy_file: str, dtype_file: str):
+def read_memmap(numpy_file: str, dtype_file: str) -> Zcatalog:
+    """Given a memory-mapped numpy array as a file, and the pickled dtype for it, read that in and return it
+
+    :param numpy_file:
+    :param dtype_file:
+    :returns:
+
+    """
+
     with open(dtype_file, "rb") as f:
         dtype = pickle.load(f)
     read = np.memmap(numpy_file, mode="r", dtype=dtype)
     return read
 
 
-@lru_cache(maxsize=1)
-def preload_memmaps(release_names: Tuple[str]):
-    preloads = dict()
-    for r in release_names:
-        log("reading memmap for:", r)
-        try:
-            release = DataRelease(r)
-            preloads[release.healpix_memmap] = read_memmap(
-                release.healpix_memmap, release.healpix_dtype
-            )
-            preloads[release.tile_memmap] = read_memmap(
-                release.tile_memmap, release.tile_dtype
-            )
-        except Exception as e:
-            log(e)
-    return preloads
 
 
 @lru_cache(maxsize=1)
-def preload_fits(release_names: Tuple[str]):
+def preload_fits(release_names: Tuple[str]) -> Dict:
+    """Find the Zcatalog fits files for each release, read them into numpy arrays, and reutrn a mapping of filenames to arrays. Intended to be called once on startup, and future calls use the cache instead of reading the files each time.
+
+    :param release_names: A list of releases to read Zcat metadata for
+    :returns: A dict mapping fits file names to ndarrays
+
+    """
+
     preloads = dict()
     for r in release_names:
         log("reading fits for:", r)
@@ -90,36 +91,6 @@ def main():
             create_memmap(release)
         except FileNotFoundError as e:
             log(e)
-
-
-def test_run():
-    logging.basicConfig(format="%(asctime)s: %(message)s")
-    logger = logging.getLogger("hdf5_converter")
-    logger.setLevel(logging.INFO)
-    DATASET = "zall-tilecumulative-jura"
-    FITS_FILE = os.path.expandvars("/dvs_ro/cfs/cdirs/desi/spectro/redux/jura/zcatalog/v1/zall-pix-jura.fits")
-    # FITS_FILE = os.path.expandvars(
-    #     "$DESIROOT/fujilite/zcatalog/zall-tilecumulative-fujilite.fits"
-    # )
-    outfile = f"{MEMMAP_DIR}/{DATASET}.npy"
-    outfile_dtype = f"{DTYPES_DIR}/{DATASET}.pickle"
-    logger.info("starting")
-    orig = fitsio.read(FITS_FILE)
-    logger.info("read fits")
-    with open(outfile_dtype, "wb") as f:
-        pickle.dump(orig.dtype, f)
-    write = np.memmap(outfile, mode="w+", dtype=orig.dtype, shape=orig.shape)
-    write[:] = orig
-    print(write.dtype)
-    print(write.shape)
-    logger.info("wrote numpy")
-    del write
-    # with open(outfile_dtype, "rb") as f:
-    #     read_dtype = pickle.load(f)
-    # read = np.memmap(outfile, mode="r", dtype=read_dtype)
-    # print(read.dtype.fields)
-    # print(read.shape)
-    # logger.info("read numpy")
 
 
 if __name__ == "__main__":
