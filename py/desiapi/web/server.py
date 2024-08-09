@@ -17,7 +17,6 @@ from .response_file import build_response
 DEBUG = True
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 app = Flask("DESI API Server", template_folder=TEMPLATE_DIR)
-# app.config.from_object(__name__)
 
 DOC_URL = (
     "https://github.com/VivianWilde/desi-api-drafting/blob/main/doc/user/userdoc.md"
@@ -73,7 +72,6 @@ def handle_post():
     :returns: None, but either renders HTML or sends a file as response
 
     """
-    # TODO: Handle sensible ways to do paths for params, so no <tileid>/<fiberids>
     data = loads(request.json)
     log("request: ", data)
     param_keys = ["requested_data", "response_type", "release", "endpoint", "params"]
@@ -171,7 +169,8 @@ def process_request(req: ApiRequest) -> Response:
                 "Request": repr(req),
                 "Error": str(e),
                 "Help": f"See {DOC_URL} for an overview of request syntax",
-            }, indent=4
+            },
+            indent=4,
         )
         log(e)
         abort(Response(info, status=500))
@@ -191,7 +190,6 @@ def exec_request(req: ApiRequest) -> Response:
         cache_root=app.config["cache"]["path"],
         cache_max_age=app.config["cache"]["max_age"],
     )
-    # log("response file: ", response_file)
 
     if mimetype(response_file) == ".html":
         return send_file(response_file)
@@ -234,7 +232,6 @@ def build_params_from_dict(endpoint: Endpoint, params: dict) -> Parameters:
 
     """
 
-    # TODO: Replace keys with consts, Kapstan style.
     try:
         if endpoint == Endpoint.RADEC:
             ra, dec, radius = [float(params[key]) for key in ["ra", "dec", "radius"]]
@@ -269,7 +266,8 @@ def build_params_from_strings(endpoint: Endpoint, params: List[str]) -> Paramete
 def invalid_request_error(e: Exception) -> Response:
     """Take an error resulting from an invalid request, and wrap it in a Flask response"""
     info = json.dumps(
-        {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"}, indent=4
+        {"Error": str(e), "Help": f"See {DOC_URL} for an overview of request syntax"},
+        indent=4,
     )
     return Response(info, status=400)
 
@@ -284,18 +282,5 @@ def run_app(config: dict):
     app.config.update(config)
     # Doesn't save the results anywhere, but calling it should cause the value to be cached if functools does its job
     preloads = app.config["preload_releases"]
-    # preload_memmaps(preloads)
-    # preload_fits(preloads)
+    preload_fits(preloads)
     app.run(host="0.0.0", debug=True)
-
-
-# For testing the pipeline from request -> build file, for testing on NERSC pre web-app
-def test_file_gen(request_args: str) -> str:
-    requested_data, response_type, release, endpoint, *params = request_args.split("/")
-    req = build_request(
-        requested_data, response_type, release, endpoint, "/".join(params), {}
-    )
-    response_file = response_file_gen.build_response(
-        req, dt.datetime.now(), app.config["cache"]
-    )
-    return response_file

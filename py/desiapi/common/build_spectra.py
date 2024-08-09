@@ -11,14 +11,10 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 
-# from ..sql import convert as sqlconvert
 from ..convert import hdf5, memmap
-from .errors import DataNotFoundException, MalformedRequestException, SqlException
+from .errors import DataNotFoundException, MalformedRequestException
 from .models import *
 from .utils import invert, log
-
-# Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
-# Use types rigorously. I have learned that they are good.
 
 # TODO params and datarelease should be dfs as well
 
@@ -85,7 +81,6 @@ def get_radec_spectra(
     relevant_targets = get_radec_zcatalog(release, ra, dec, radius, filters)
     log(f"Retrieving {len(relevant_targets)} targets")
     return get_target_spectra_from_metadata(release, relevant_targets)
-    # return desispec.spectra.stack(spectra)
 
 
 def get_tile_spectra(
@@ -120,7 +115,6 @@ def get_tile_spectra(
     log("read spectra")
     if isinstance(spectra, Tuple):
         spectra_data, redrock = spectra
-        # keep = np.isin(redrock["FIBERID"], fibers) & redrock["TILE"]==tile
         spectra_data.extra_catalog = redrock
         return spectra_data
     else:
@@ -177,8 +171,6 @@ def get_tile_zcatalog(
     desired_columns = DESIRED_COLUMNS_TILE[:]
     for k in filters.keys():
         desired_columns.append(k)
-
-        # TODO: SQL stuff
     try:
         zcatalog = unfiltered_zcatalog(
             desired_columns,
@@ -269,22 +261,23 @@ def unfiltered_zcatalog(
     :returns:
     """
 
+    if desired_columns != DESIRED_COLUMNS_TARGET and desired_columns != DESIRED_COLUMNS_TILE:
+        # Custom columns request
+        # Try memmap
+        # Try hdf5
+        # Try fits
+
+
+
     # This call should rely on the preloaded cache
     preloaded_fits = memmap.preload_fits(PRELOAD_RELEASES)
     if fits_file in preloaded_fits.keys():
         log("used preloaded fits")
         return preloaded_fits.get(fits_file)
 
-    # preloaded_memmap = memmap.preload_memmaps(PRELOAD_RELEASES)
-    # if numpy_file in preloaded_memmap.keys():
-    #     log("used preloaded memmap")
-    #     log(memmap.preload_memmaps.cache_info())
-    #     return preloaded_memmap.get(numpy_file)
-
     try:
         log("reading zcatalog info from", numpy_file)
         return memmap.read_memmap(numpy_file, dtype_file)
-        # log("zcatalog: ", zcatalog)
     except Exception as e:
         log(e)
 

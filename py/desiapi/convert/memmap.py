@@ -58,7 +58,7 @@ def read_memmap(numpy_file: str, dtype_file: str) -> Zcatalog:
 
 
 
-
+# TODO move this
 @lru_cache(maxsize=1)
 def preload_fits(release_names: Tuple[str]) -> Dict:
     """Find the Zcatalog fits files for each release, read them into numpy arrays, and reutrn a mapping of filenames to arrays. Intended to be called once on startup, and future calls use the cache instead of reading the files each time.

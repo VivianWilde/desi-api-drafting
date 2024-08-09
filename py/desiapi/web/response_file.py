@@ -39,9 +39,7 @@ def build_response(
         )
         return resp_file_path
     else:
-        zcatalog = handle_zcatalog(
-            req
-        )  # object returned by fitsio.read + slicing/dicing
+        zcatalog = handle_zcatalog(req)
         resp_file_path = create_zcat_file(
             req,
             zcatalog,
@@ -97,7 +95,6 @@ def write_zcat_to_file(target_file: str, zcat: Zcatalog, filetype: str):
                 f.write(zcat_to_json_str(zcat))
         case "csv":
             np.savetxt(target_file, zcat)
-            # TODO: test, and also should we have a header
         case _:
             raise MalformedRequestException("invalid filetype requested")
 
@@ -149,7 +146,7 @@ def zcat_to_html(req: ApiRequest, zcat: Zcatalog, save_dir: str, file_name: str)
     html_file = f"{save_dir}/{file_name}.html"
     json_data = json.loads(zcat_to_json_str(zcat))
     for record in json_data:
-        record["TARGETID"]=str(record["TARGETID"])
+        record["TARGETID"] = str(record["TARGETID"])
     json_str = json.dumps(json_data)
     with open(html_file, "w") as out:
         out.write(

@@ -14,13 +14,14 @@ MEMMAP_DIR = os.path.expandvars("$SCRATCH/memmap")
 DTYPE_DIR = os.path.expandvars("$SCRATCH/dtype")
 HDF5_DIR = os.path.expandvars("$SCRATCH/hdf5")
 
-FITS_FILE = os.path.expandvars(
-    "$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-pix-jura.fits"
-)
 # FITS_FILE = os.path.expandvars(
-#     "$HOME/d/urap/data/fujilite/zcatalog/zall-pix-fujilite.fits"
+#     "$DESI_SPECTRO_REDUX/jura/zcatalog/v1/zall-pix-jura.fits"
 # )
-DATASET = "zall-pix-jura"
+FITS_FILE = os.path.expandvars(
+    "$HOME/d/urap/data/fujilite/zcatalog/zall-pix-fujilite.fits"
+)
+# DATASET = "zall-pix-jura"
+DATASET = "zall-pix-fujilite"
 
 
 def memmap_write(fits_file, dataset):
@@ -41,7 +42,6 @@ def memmap_read(dataset, columns):
     dtype_file = f"{DTYPE_DIR}/{dataset}.pickle"
     with open(dtype_file, "rb") as f:
         dtype = pickle.load(f)
-    log(dtype.fields.keys())
     read = np.memmap(numpy_file, mode="r", dtype=dtype)[columns]
     return read
 
@@ -78,9 +78,12 @@ def hdf5_read(dataset, columns):
     return table
 
 
+def fits_read(dataset, columns):
+    return fitsio.read(FITS_FILE, "ZCATALOG", columns=columns)
+
+
 # Testing testing
-# all_fields=['TARGETID', 'SURVEY', 'PROGRAM', 'HEALPIX', 'SPGRPVAL', 'Z', 'ZERR', 'ZWARN', 'CHI2', 'COEFF', 'NPIXELS', 'SPECTYPE', 'SUBTYPE', 'NCOEFF', 'DELTACHI2', 'COADD_FIBERSTATUS', 'TARGET_RA', 'TARGET_DEC', 'PMRA', 'PMDEC', 'REF_EPOCH', 'FA_TARGET', 'FA_TYPE', 'OBJTYPE', 'SUBPRIORITY', 'OBSCONDITIONS', 'RELEASE', 'BRICKNAME', 'BRICKID', 'BRICK_OBJID', 'MORPHTYPE', 'EBV', 'FLUX_G', 'FLUX_R', 'FLUX_Z', 'FLUX_W1', 'FLUX_W2', 'FLUX_IVAR_G', 'FLUX_IVAR_R', 'FLUX_IVAR_Z', 'FLUX_IVAR_W1', 'FLUX_IVAR_W2', 'FIBERFLUX_G', 'FIBERFLUX_R', 'FIBERFLUX_Z', 'FIBERTOTFLUX_G', 'FIBERTOTFLUX_R', 'FIBERTOTFLUX_Z', 'MASKBITS', 'SERSIC', 'SHAPE_R', 'SHAPE_E1', 'SHAPE_E2', 'REF_ID', 'REF_CAT', 'GAIA_PHOT_G_MEAN_MAG', 'GAIA_PHOT_BP_MEAN_MAG', 'GAIA_PHOT_RP_MEAN_MAG', 'PARALLAX', 'PHOTSYS', 'PRIORITY_INIT', 'NUMOBS_INIT', 'CMX_TARGET', 'DESI_TARGET', 'BGS_TARGET', 'MWS_TARGET', 'SCND_TARGET', 'SV1_DESI_TARGET', 'SV1_BGS_TARGET', 'SV1_MWS_TARGET', 'SV1_SCND_TARGET', 'SV2_DESI_TARGET', 'SV2_BGS_TARGET', 'SV2_MWS_TARGET', 'SV2_SCND_TARGET', 'SV3_DESI_TARGET', 'SV3_BGS_TARGET', 'SV3_MWS_TARGET', 'SV3_SCND_TARGET', 'PLATE_RA', 'PLATE_DEC', 'COADD_NUMEXP', 'COADD_EXPTIME', 'COADD_NUMNIGHT', 'COADD_NUMTILE', 'MEAN_DELTA_X', 'RMS_DELTA_X', 'MEAN_DELTA_Y', 'RMS_DELTA_Y', 'MEAN_FIBER_RA', 'STD_FIBER_RA', 'MEAN_FIBER_DEC', 'STD_FIBER_DEC', 'MEAN_PSF_TO_FIBER_SPECFLUX', 'TSNR2_GPBDARK_B', 'TSNR2_ELG_B', 'TSNR2_GPBBRIGHT_B', 'TSNR2_LYA_B', 'TSNR2_BGS_B', 'TSNR2_GPBBACKUP_B', 'TSNR2_QSO_B', 'TSNR2_LRG_B', 'TSNR2_GPBDARK_R', 'TSNR2_ELG_R', 'TSNR2_GPBBRIGHT_R', 'TSNR2_LYA_R', 'TSNR2_BGS_R', 'TSNR2_GPBBACKUP_R', 'TSNR2_QSO_R', 'TSNR2_LRG_R', 'TSNR2_GPBDARK_Z', 'TSNR2_ELG_Z', 'TSNR2_GPBBRIGHT_Z', 'TSNR2_LYA_Z', 'TSNR2_BGS_Z', 'TSNR2_GPBBACKUP_Z', 'TSNR2_QSO_Z', 'TSNR2_LRG_Z', 'TSNR2_GPBDARK', 'TSNR2_ELG', 'TSNR2_GPBBRIGHT', 'TSNR2_LYA', 'TSNR2_BGS', 'TSNR2_GPBBACKUP', 'TSNR2_QSO', 'TSNR2_LRG', 'SV_NSPEC', 'SV_PRIMARY', 'ZCAT_NSPEC', 'ZCAT_PRIMARY']
-all_fields = [
+ALL_FIELDS = [
     "TARGETID",
     "SURVEY",
     "PROGRAM",
@@ -219,12 +222,12 @@ all_fields = [
     "ZCAT_NSPEC",
     "ZCAT_PRIMARY",
 ]
-all_fields.remove("TARGET_RA")
-all_fields.remove("TARGET_DEC")
+ALL_FIELDS.remove("TARGET_RA")
+ALL_FIELDS.remove("TARGET_DEC")
 
-TEN_COLS = all_fields[:10] + ["TARGET_RA", "TARGET_DEC"]
-TWENTY_COLS = all_fields[:20] + ["TARGET_RA", "TARGET_DEC"]
-FIFTY_COLS = all_fields[:50] + ["TARGET_RA", "TARGET_DEC"]
+TEN_COLS = ALL_FIELDS[:10] + ["TARGET_RA", "TARGET_DEC"]
+TWENTY_COLS = ALL_FIELDS[:20] + ["TARGET_RA", "TARGET_DEC"]
+FIFTY_COLS = ALL_FIELDS[:50] + ["TARGET_RA", "TARGET_DEC"]
 
 
 def write():
@@ -298,4 +301,5 @@ def radec_filter(ra, dec, radius, targets):
 
 
 # Run
-main()
+if __name__== "__main__":
+    main()
