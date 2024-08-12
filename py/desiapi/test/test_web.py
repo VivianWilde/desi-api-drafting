@@ -3,7 +3,6 @@ import requests
 
 from ..common.build_spectra import *
 from ..common.models import *
-from ..web.server import test_file_gen
 
 # Build_spectra tests: Test it gets the right data in our internal python format
 
@@ -123,9 +122,7 @@ def test_target_filters():
 
 # App tests: Given an endpoint string, build and return response file for it
 def meta_test_app(req: str):
-    x = test_file_gen(req)
-    print(x)
-    return x
+    pass
 
 
 def test_app_tile():

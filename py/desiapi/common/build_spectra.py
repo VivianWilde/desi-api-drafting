@@ -174,10 +174,10 @@ def get_tile_zcatalog(
     try:
         zcatalog = unfiltered_zcatalog(
             desired_columns,
+            release.tile_hdf5,
             release.tile_memmap,
             release.tile_dtype,
             release.tile_fits,
-            release.tile_hdf5,
         )
     except Exception as e:
         raise DataNotFoundException("unable to read tile information")
@@ -210,10 +210,10 @@ def get_target_zcatalog(
     try:
         zcatalog = unfiltered_zcatalog(
             desired_columns,
+            release.healpix_hdf5,
             release.healpix_memmap,
             release.healpix_dtype,
             release.healpix_fits,
-            release.healpix_hdf5,
         )
 
     except Exception as e:
@@ -242,10 +242,10 @@ def get_target_zcatalog(
 
 def unfiltered_zcatalog(
     desired_columns: List[str],
+    hdf5_file: str,
     numpy_file: str,
     dtype_file: str,
     fits_file: str,
-    hdf5_file: str,
 ) -> Zcatalog:
     """Attempt to read zcat info from several sources, starting with the most performant and falling back to other methods if necessary.
     Order is:
@@ -261,19 +261,16 @@ def unfiltered_zcatalog(
     :returns:
     """
 
-    if desired_columns != DESIRED_COLUMNS_TARGET and desired_columns != DESIRED_COLUMNS_TILE:
-        # Custom columns request
-        # Try memmap
-        # Try hdf5
-        # Try fits
-
-
-
-    # This call should rely on the preloaded cache
-    preloaded_fits = memmap.preload_fits(PRELOAD_RELEASES)
-    if fits_file in preloaded_fits.keys():
-        log("used preloaded fits")
-        return preloaded_fits.get(fits_file)
+    if (
+        desired_columns == DESIRED_COLUMNS_TARGET
+        or desired_columns == DESIRED_COLUMNS_TILE
+    ):
+        log("checking preloaded fits")
+        preloaded_fits = memmap.preload_fits()
+        log("preload accessed")
+        if fits_file in preloaded_fits.keys():
+            log("used preloaded fits")
+            return preloaded_fits.get(fits_file)
 
     try:
         log("reading zcatalog info from", numpy_file)

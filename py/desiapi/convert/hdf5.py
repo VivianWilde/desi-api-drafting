@@ -4,7 +4,7 @@ import os
 import fitsio
 import datetime as dt
 import numpy as np
-from typing import List
+from typing import List, Tuple
 import numpy.lib.recfunctions as rfn
 
 from astropy.table import Table

@@ -1,5 +1,5 @@
 # spectro_redux="/spectro_redux"
-preload_releases = ["jura","iron"]
+preload_releases = ["fujilite", "jura","iron"]
 # Base dir where memmap, etc are stored
 # zcatalog_dir TODO
 [cache]

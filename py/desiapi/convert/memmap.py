@@ -2,11 +2,13 @@ import fitsio
 import datetime as dt
 import numpy as np
 import pickle
-from typing import Tuple
+from typing import Tuple, Dict
 from functools import lru_cache
 
 
 from ..common.models import (
+    DESIRED_COLUMNS_TARGET,
+    DESIRED_COLUMNS_TILE,
     DataRelease,
     PRELOAD_RELEASES,
     Zcatalog,
@@ -76,10 +78,9 @@ def preload_fits(release_names: Tuple[str]) -> Dict:
             log(release.healpix_fits)
             log(release.tile_fits)
             preloads[release.healpix_fits] = fitsio.read(
-                release.healpix_fits, "ZCATALOG"
+                release.healpix_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TARGET
             )
-            preloads[release.tile_fits] = fitsio.read(release.tile_fits, "ZCATALOG")
-
+            preloads[release.tile_fits] = fitsio.read(release.tile_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TILE)
         except Exception as e:
             log(e)
     return preloads
