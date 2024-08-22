@@ -1,8 +1,7 @@
-# spectro_redux="/spectro_redux"
-
 [cache]
-path= "~/tmp/desi-api-cache"
-# How old must a cached response be before we discard it, in minutes
+# The path to the root directory of the cache, where responses are stored once they are generated
+path= "/cache"
+# How old must a cached response be before we discard it, in minutes. 0 is a special case meaning never invalidate the cache
 max_age = 60
-# How large the cache is allowed to get
+# How large the cache is allowed to get, in human-readable format (so `5kb` is also acceptable, for instance)
 max_size = '1gb'

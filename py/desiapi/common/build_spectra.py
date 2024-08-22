@@ -1,23 +1,22 @@
 #!/usr/bin/env ipython3
 import operator
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+
+from functools import lru_cache
 
 import desispec.io
 import desispec.spectra
 import fitsio
 import numpy as np
-from astropy.table import Table
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from astropy.table import Table, vstack
 
-from .models import *
-from .utils import log
+from ..convert import hdf5, memmap
 from .errors import DataNotFoundException, MalformedRequestException
-
-# Consider doing this go-style, with liberal use of dataclasses to prevent type errors.
-# Use types rigorously. I have learned that they are good.
-
-# TODO params and datarelease should be dfs as well
-
+from .models import *
+from .utils import invert, log
 
 def handle_spectra(req: ApiRequest) -> Spectra:
     """
@@ -29,7 +28,6 @@ def handle_spectra(req: ApiRequest) -> Spectra:
 
     canonised = canonise_release_name(req.release)
     release = DataRelease(canonised)
-    log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
         return get_tile_spectra(release, params.tile, params.fibers, req.filters)
@@ -53,7 +51,6 @@ def handle_zcatalog(req: ApiRequest) -> Zcatalog:
 
     canonised = canonise_release_name(req.release)
     release = DataRelease(canonised)
-    log("release: ", release)
     params = req.params
     if req.endpoint == Endpoint.TILE:
         return get_tile_zcatalog(release, params.tile, params.fibers, req.filters)
@@ -77,12 +74,12 @@ def get_radec_spectra(
     :param ra: Right Ascension of the target point
     :param dec: Declination of the target point
     :param radius: Radius (in arcseconds) around the target point to search. Capped at 60 arcsec for now
+    :param filters: A dictionary of filters to restrict the objects retrieved
     :returns: A combined Spectra of all such objects in the data release
     """
     relevant_targets = get_radec_zcatalog(release, ra, dec, radius, filters)
     log(f"Retrieving {len(relevant_targets)} targets")
-    spectra = get_populated_target_spectra(release, relevant_targets)
-    return desispec.spectra.stack(spectra)
+    return get_target_spectra_from_metadata(release, relevant_targets)
 
 
 def get_tile_spectra(
@@ -94,12 +91,12 @@ def get_tile_spectra(
     :param release: The data release to use as a data source
     :param tile: Index of tile to access
     :param fibers: Fibers within the tile being requested
+    :param filter: Currently ignored
     :returns: A combined Spectra containing the spectra of all specified fibers
     """
     folder = f"{release.tile_dir}/{tile}"
     log("reading tile info from: ", folder)
     latest = max(os.listdir(folder))
-    log(latest)
 
     try:
         spectra = desispec.io.read_tile_spectra(
@@ -117,7 +114,6 @@ def get_tile_spectra(
     log("read spectra")
     if isinstance(spectra, Tuple):
         spectra_data, redrock = spectra
-        # keep = np.isin(redrock["FIBERID"], fibers) & redrock["TILE"]==tile
         spectra_data.extra_catalog = redrock
         return spectra_data
     else:
@@ -132,67 +128,73 @@ def get_target_spectra(
 
     :param release: The data release to use as a data source
     :param target_ids: The list of target identifiers to search for
+    :param filters: The set of filters that restricts which targets are selected
     :returns: A Spectra object combining individual spectra for all targets
     """
 
     target_objects = get_target_zcatalog(release, target_ids, filters)
-    return desispec.spectra.stack(get_populated_target_spectra(release, target_objects))
+    return get_target_spectra_from_metadata(release, target_objects)
 
 
 def get_radec_zcatalog(
     release: DataRelease, ra: float, dec: float, radius: float, filters: Filter
 ) -> Zcatalog:
     """
-
     :param release:
     :param ra:
     :param dec:
     :param radius:
     :param filters:
     :returns:
-
     """
+    # TODO doc
     targets = get_target_zcatalog(release, filters=filters)
+    ctargets = SkyCoord(
+        targets["TARGET_RA"] * u.degree, targets["TARGET_DEC"] * u.degree
+    )
 
-    distfilter = (ra - targets["TARGET_RA"]) ** 2 + (
-        dec - targets["TARGET_DEC"]
-    ) ** 2 <= radius
-    return targets[distfilter]
+    log("computing filter index")
+    center = SkyCoord(ra * u.degree, dec * u.degree)
+
+    ii = center.separation(ctargets) <= radius * u.degree
+
+    log("applying filter index")
+    filtered = targets[ii]
+    log("applied filter")
+    return filtered
 
 
 def get_tile_zcatalog(
-    release: DataRelease, tile: int, fibers: List[int], filters: Filter
+    # TODO doc
+    release: DataRelease,
+    tile: int,
+    fibers: List[int],
+    filters: Filter,
 ):
-    desired_columns = [
-        "TARGETID",
-        "TILEID",
-        "FIBER",
-        "SURVEY",
-        "PROGRAM",
-        "ZCAT_PRIMARY",
-        "TARGET_RA",
-        "TARGET_DEC",
-    ]
+    desired_columns = DESIRED_COLUMNS_TILE[:]
     for k in filters.keys():
         desired_columns.append(k)
-
-    zcatfile = release.tile_fits
-    log("reading target zcatalog info from: ", zcatfile)
     try:
-        zcatalog = fitsio.read(
-            zcatfile,
-            "ZCATALOG",
-            columns=desired_columns,
+        zcatalog = unfiltered_zcatalog(
+            desired_columns,
+            release.tile_hdf5,
+            release.tile_memmap,
+            release.tile_dtype,
+            release.tile_fits,
         )
     except Exception as e:
         raise DataNotFoundException("unable to read tile information")
+    log("read unfiltered zcatalog")
     keep = (zcatalog["TILEID"] == tile) & np.isin(zcatalog["FIBER"], fibers)
     zcatalog = zcatalog[keep]
     return filter_zcatalog(zcatalog, filters)
 
 
 def get_target_zcatalog(
-    release: DataRelease, target_ids: List[int] = [], filters: Filter = dict()
+    # TODO doc
+    release: DataRelease,
+    target_ids: List[int] = [],
+    filters: Filter = dict(),
 ) -> Zcatalog:
     """
     For each TARGET_ID, read the corresponding target metadata into a Target object.
@@ -201,32 +203,26 @@ def get_target_zcatalog(
     :param target_ids: The list of target identifiers to build objects for. If this list is empty, blindly reads all targets
     :returns: A list of target objects, each containing metadata for a target with a specified target_id
     """
-    desired_columns = [
-        "TARGETID",
-        "HEALPIX",
-        "SURVEY",
-        "PROGRAM",
-        "ZCAT_PRIMARY",
-        "TARGET_RA",
-        "TARGET_DEC",
-    ]
+    desired_columns = DESIRED_COLUMNS_TARGET[:]
 
     # Also read in metadata we want to filter on
     for k in filters.keys():
         if k not in SPECIAL_QUERY_PARAMS:
             desired_columns.append(k)
 
-    zcatfile = release.healpix_fits
-    log("reading target zcatalog info from: ", zcatfile)
     try:
-        zcatalog = fitsio.read(
-            zcatfile,
-            "ZCATALOG",
-            columns=desired_columns,
+        zcatalog = unfiltered_zcatalog(
+            desired_columns,
+            release.healpix_hdf5,
+            release.healpix_memmap,
+            release.healpix_dtype,
+            release.healpix_fits,
         )
-    except:
-        raise DataNotFoundException("unable to read target information")
 
+    except Exception as e:
+        log(e)
+        raise DataNotFoundException("unable to read target information")
+    log("computing keep indices")
     keep = (
         ((zcatalog["ZCAT_PRIMARY"] == True) & np.isin(zcatalog["TARGETID"], target_ids))
         if len(target_ids)
@@ -234,76 +230,116 @@ def get_target_zcatalog(
     )
 
     zcatalog = zcatalog[keep]
+    log("computed keep indices")
 
     # Check for missing IDs
     missing_ids = []
-    found_ids = set(zcatalog["TARGETID"])
-    for i in target_ids:
-        if i not in found_ids:
-            missing_ids.append(i)
+    if len(target_ids):
+        found_ids = set(zcatalog["TARGETID"])
+        missing_ids = [i for i in target_ids if i not in found_ids]
     if len(missing_ids):
         raise DataNotFoundException("unable to find targets:", target_ids)
     return filter_zcatalog(zcatalog, filters)
 
 
-# TODO needs a better name
-def get_populated_target_spectra(
-    release: DataRelease, targets: Zcatalog
-) -> List[Spectra]:
+def unfiltered_zcatalog(
+    desired_columns: List[str],
+    hdf5_file: str,
+    numpy_file: str,
+    dtype_file: str,
+    fits_file: str,
+) -> Zcatalog:
+    """Attempt to read zcat info from several sources, starting with the most performant and falling back to other methods if necessary.
+    Order is:
+    1. Preloaded/cached data (contains a limited set of columns)
+    2. Numpy memmapped file (contains the full set of columns)
+    3. FITS file (if the other methods fail)
+
+    :param desired_columns: List of columns to read from the file
+    :param numpy_file: Data file from which to read a thing
+    :param dtype_file: File containing the pickled datatype for the numpy array
+    :param fits_file: Original fits file where the data is stored
+    :param hdf5_file: TODO
+    :returns:
     """
-    Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list.
+
+    if (
+        desired_columns == DESIRED_COLUMNS_TARGET
+        or desired_columns == DESIRED_COLUMNS_TILE
+    ):
+        log("checking preloaded fits")
+        preloaded_fits = preload_fits(PRELOAD_RELEASES)
+        log("preload accessed")
+        if fits_file in preloaded_fits.keys():
+            log("used preloaded fits")
+            return preloaded_fits.get(fits_file)
+
+    try:
+        log("reading zcatalog info from", numpy_file)
+        return memmap.read_memmap(numpy_file, dtype_file)
+    except Exception as e:
+        log(e)
+
+    try:
+        log("reading zcatalog info from", hdf5_file)
+        return hdf5.from_hdf5_datasets(hdf5_file, desired_columns)
+    except Exception as e:
+        log(e)
+
+    log("reading zcatalog info from: ", fits_file)
+    return fitsio.read(
+        fits_file,
+        "ZCATALOG",
+        columns=desired_columns,
+    )
+
+
+def get_target_spectra_from_metadata(
+    release: DataRelease, targets: Zcatalog
+) -> Spectra:
+    """
+    Given a list of TARGETS with populated metadata, retrieve each of their spectra as a list. Uses some trickery to ensure that the constructed Zcatalog has the target IDs in the original order specified
 
     :param release: The data release to use as a data source
     :param targets: A list of Target objects
     :returns: A list of Spectra objects, one for each target passed in
     """
-    # Unoptimised: Reads one file per target, no grouping of targets, so may read same file several times.
-    # TODO: Optimise, logging
-    target_spectra = []
-    failures = []
+    target_spectra = desispec.io.read_spectra_parallel(targets, specprod=release.name)
+    redrock_to_targets = dict()
     for target in targets:
-        try:
-            source_file = desispec.io.findfile(
-                "coadd",
-                survey=target["SURVEY"],
-                faprogram=target["PROGRAM"],
-                groupname="healpix",
-                healpix=target["HEALPIX"],
-                specprod_dir=release.directory,
-            )
-            redrock_file = desispec.io.findfile(
-                "redrock",
-                survey=target["SURVEY"],
-                faprogram=target["PROGRAM"],
-                groupname="healpix",
-                healpix=target["HEALPIX"],
-                specprod_dir=release.directory,
-            )
-            spectra = desispec.io.read_spectra(
-                source_file, targetids=[target["TARGETID"]]
-            )
-            zcatalog = Table.read(redrock_file, "REDSHIFTS")
-            keep = zcatalog["TARGETID"] == target["TARGETID"]
-            zcatalog = zcatalog[keep]
-            spectra.extra_catalog = zcatalog
-            target_spectra.append(spectra)
-        except:
-            failures.append(target["TARGETID"])
-    if len(failures):
-        raise DataNotFoundException("unable to locate spectra for targets", failures)
+        redrock_file = desispec.io.findfile(
+            "redrock",
+            survey=target["SURVEY"],
+            faprogram=target["PROGRAM"],
+            groupname="healpix",
+            healpix=target["HEALPIX"],
+            specprod_dir=release.directory,
+        )
+        redrock_to_targets[redrock_file] = redrock_to_targets.get(redrock_file, []) + [
+            target["TARGETID"]
+        ]
+    zcatalog = Table.read(redrock_file, "REDSHIFTS")
+    zcatalog.remove_rows(slice(0, len(zcatalog)))
+    total_kept = 0
+    for redrock, redrock_targets in redrock_to_targets.items():
+        new = Table.read(redrock, "REDSHIFTS")
+        keep = np.isin(new["TARGETID"], redrock_targets)
+        new = new[keep]
+        zcatalog = vstack([zcatalog, new])
+        total_kept += len(new)
+    zcatalog = sort_zcat(zcatalog, targets)
+    target_spectra.extra_catalog = zcatalog
     return target_spectra
 
 
 def clause_from_filter(key: str, value: str, targets: Zcatalog) -> Clause:
     """Given a column name KEY and a filter string VALUE of the form '<operation><value>' and a ZCATALOG of target metadata, create a boolean array where Arr[i] is true iff the i^th record satisfies the filter.
 
-    :param key:
-    :param value:
-    :param targets:
-    :returns:
-
+    :param key: The name of the column to filter on
+    :param value: The value of the filter, a string containing a comparison (one of >,<,=) and a value to compare against
+    :param targets: The Zcatalog data from which to filter out targets
+    :returns: A boolean mask that can be applied to the Zcatalog to remove anything that doesn't apply the filter
     """
-
     operator_fns = {
         ">": operator.gt,
         "=": operator.eq,
@@ -329,21 +365,34 @@ def clause_from_filter(key: str, value: str, targets: Zcatalog) -> Clause:
     return func(targets[key], value)
 
 
-def filter_spectra(spectra: Spectra, options: Filter) -> Spectra:
-    # TODO
-    return spectra
+def table_shape(table: np.ndarray | Table):
+    """A generalisation of array.shape that also works on astropy tables. Returns a tuple (rows, columns)
+
+    :param table:
+    :returns:
+
+    """
+
+    if isinstance(table, np.ndarray):
+        return table.shape
+    elif isinstance(table, Table):
+        return (len(table), len(table.columns))
 
 
 def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
     """Given a collection of FILTERS of the form {column_name: "<test><value>"}, filter the ZCAT to only include records which satisfy all of those filters and return that filtered copy.
 
-    :param zcatalog:
-    :param filters:
+    :param zcatalog: TODO
+    :param filters: TODO
     :returns:
 
     """
-
-    filtered_keep = np.full(zcatalog.shape, True, dtype=bool)
+    # Speed trick for when there are no filters
+    log("filtering zcat")
+    if len(filters)==0:
+        log("skipped filter")
+        return zcatalog
+    filtered_keep = np.full(table_shape(zcatalog), True, dtype=bool)
     for k, v in filters.items():
         if k in SPECIAL_QUERY_PARAMS:
             pass
@@ -351,3 +400,43 @@ def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
             clause = clause_from_filter(k, v, zcatalog)
             filtered_keep = np.logical_and(filtered_keep, clause)
     return zcatalog[filtered_keep]
+
+
+# Permutation Functions
+def sort_zcat(zcat: Zcatalog, target_ids: Zcatalog) -> Zcatalog:
+    """Given a Zcatalog of targets in arbitrary order, and a set of target IDs in order, reorder the entries in ZCAT according to the order of IDs in TARGET_IDs
+
+    :param zcat: Zcatalog table of targets and their metadata
+    :param target_ids: A 1-d array of target IDs, representing the desired order for the Zcatalog
+    :returns: The original Zcatalog, permuted so that the order lines up with the order of target_ids.
+    """
+    sorted_zcat = np.argsort(zcat, order="TARGETID")
+    sorted_input = np.argsort(target_ids)
+    # zcat->sorted, and then reverse input->sorted, so we end up with zcat->sorted->input
+    return zcat[sorted_zcat][invert(sorted_input)]
+
+
+@lru_cache(maxsize=1)
+def preload_fits(release_names: Tuple[str]) -> Dict:
+    """Find the Zcatalog fits files for each release, read them into numpy arrays, and reutrn a mapping of filenames to arrays. Intended to be called once on startup, and future calls use the cache instead of reading the files each time.
+
+    :param release_names: A list of releases to read Zcat metadata for
+    :returns: A dict mapping fits file names to ndarrays
+
+    """
+    preloads = dict()
+    for r in release_names:
+        log("reading fits for:", r)
+        try:
+            release = DataRelease(r)
+            log(release.healpix_fits)
+            log(release.tile_fits)
+            preloads[release.healpix_fits] = fitsio.read(
+                release.healpix_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TARGET
+            )
+            preloads[release.tile_fits] = fitsio.read(
+                release.tile_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TILE
+            )
+        except Exception as e:
+            log(e)
+    return preloads

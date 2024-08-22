@@ -2,7 +2,7 @@ FROM docker.io/library/python:3.11
 
 #- install dependencies
 RUN  python -m pip install --upgrade pip setuptools wheel \
-  && python -m pip install astropy scipy numba "numpy<2.0" pytest fitsio "bokeh<3" flask numpyencoder \
+  && python -m pip install astropy scipy numba "numpy<2.0" pytest fitsio "bokeh<3" flask numpyencoder pandas h5py \
   && python -m pip install --no-deps git+https://github.com/desihub/desiutil \
   && python -m pip install --no-deps git+https://github.com/desihub/desitarget \
   && python -m pip install --no-deps git+https://github.com/desihub/desispec \
@@ -15,6 +15,11 @@ RUN mkdir -p /desi/spectro \
   && git clone https://github.com/desihub/redrock-templates \
   && curl  https://raw.githubusercontent.com/desihub/redrock-templates/0.7.2/rrtemplate-qso.fits -o redrock-templates/rrtemplate-qso.fits
 
+#
+RUN apt-get update
+RUN apt-get install neovim -y
+# Thank me when you have to debug a running container.
+
 #- when launching the container, mount an external directory to /desi/spectro/redux
 ENV DESI_ROOT=/desi
 ENV DESI_SPECTRO_REDUX=/desi/spectro/redux
@@ -24,5 +29,3 @@ ENV RR_TEMPLATE_DIR=/desi/redrock-templates
 #- if there are problems with fitsio, notes from desi github test env
 ##  && python -m pip cache remove fitsio \
 ##  && python -m pip install --no-deps --force-reinstall --ignore-installed fitsio
-
-

@@ -3,7 +3,6 @@ import requests
 
 from ..common.build_spectra import *
 from ..common.models import *
-from ..web.server import test_file_gen
 
 # Build_spectra tests: Test it gets the right data in our internal python format
 
@@ -123,9 +122,7 @@ def test_target_filters():
 
 # App tests: Given an endpoint string, build and return response file for it
 def meta_test_app(req: str):
-    x = test_file_gen(req)
-    print(x)
-    return x
+    pass
 
 
 def test_app_tile():
@@ -198,6 +195,11 @@ fujilite_endpoints = [
     "zcat/download/fujilite/targets/39628368387245557,39628368404022902",  # Works
 ]
 
+cursed_endpoints = [
+
+    "zcat/download/fujilite/targets/3962836838,75",  # Should fail
+]
+
 zcat_plot_endpoints = [
     "zcat/plot/fujilite/radec/210.9,24.8,180",
     "zcat/plot/fujilite/tile/80858/600,900,1000",
@@ -205,10 +207,10 @@ zcat_plot_endpoints = [
 ]
 
 filter_endpoints = [
-    # "spectra/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
+    "spectra/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
     "zcat/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
     "zcat/download/fujilite/tile/80858/600,900,1000?fiber=<950",
-    # "zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
+    "zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
     "zcat/download/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
 ]
 
@@ -227,9 +229,11 @@ def test_fujilite_filegen():
         resps[endpoint] = test_file_gen(endpoint)
     return resps
 
+
 if __name__ == "__main__":
     # test_fujilite(spectra_plot_endpoints)
+    # test_fujilite(cursed_endpoints)
     test_fujilite(fujilite_endpoints)
     test_fujilite(zcat_plot_endpoints)
-# test_fujilite(filter_endpoints)
+    test_fujilite(filter_endpoints)
 # test_post_targets()

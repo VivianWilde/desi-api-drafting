@@ -10,11 +10,11 @@ from ..common.build_spectra import handle_spectra, handle_zcatalog
 from ..common.cache import check_cache
 from ..common.errors import DataNotFoundException, DesiApiException
 from ..common.models import *
-from ..common.utils import log
+from ..common.utils import log, expand_path
 
 
 def default_cache_dir() -> str:
-    return os.path.expanduser("~/tmp/desi-api-cache")
+    return expand_path("~/tmp/desi-api-cache")
     # TODO magic
 
 
@@ -86,7 +86,9 @@ class DesiApiClient:
                 case RequestedData.ZCAT:
                     return handle_zcatalog(req)
                 case RequestedData.SPECTRA:
-                    return handle_spectra(req)
+                    resp = handle_spectra(req)
+                    log("handled spectra")
+                    return resp
                 case _:
                     raise MalformedRequestException("Ok what the actual hell")
         except DataNotFoundException:
