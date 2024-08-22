@@ -1,4 +1,5 @@
 ## Introduction
+Read the user docs (`userdoc.md`) before reading this, if you haven't already.
 
 The quickest way to get started with running the server raw (i.e not through a docker container) is to run `python -m desi_api.web.cli server -c /etc/docker/config.toml`, which uses a prewritten config file and starts a webserver. If it fails, make sure that the `cache_path` in the config file is one that exists on your device and try again
 

@@ -1,8 +1,3 @@
----
-author: Vivien Goyal
-title: User Documentation
----
-
 # Introduction
 
 The API allows you to programatically query data from the DESI project (<https://www.desi.lbl.gov>). Conceptually the data is spectrographic information on various objects and regions of space, and the API returns it in the form of either FITS files or interactive plots.
