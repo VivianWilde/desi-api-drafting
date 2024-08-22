@@ -93,7 +93,6 @@ def main():
         log(release)
         try:
             create_hdf5(release)
-            # tile, healpix = read_hdf5s(release)
         except FileNotFoundError as e:
             log(e)
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env ipython3
 import operator
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+
+from functools import lru_cache
 
 import desispec.io
 import desispec.spectra
@@ -15,9 +17,6 @@ from ..convert import hdf5, memmap
 from .errors import DataNotFoundException, MalformedRequestException
 from .models import *
 from .utils import invert, log
-
-# TODO params and datarelease should be dfs as well
-
 
 def handle_spectra(req: ApiRequest) -> Spectra:
     """
@@ -150,15 +149,19 @@ def get_radec_zcatalog(
     """
     # TODO doc
     targets = get_target_zcatalog(release, filters=filters)
-    print(targets.dtype)
     ctargets = SkyCoord(
         targets["TARGET_RA"] * u.degree, targets["TARGET_DEC"] * u.degree
     )
+
+    log("computing filter index")
     center = SkyCoord(ra * u.degree, dec * u.degree)
 
     ii = center.separation(ctargets) <= radius * u.degree
 
-    return targets[ii]
+    log("applying filter index")
+    filtered = targets[ii]
+    log("applied filter")
+    return filtered
 
 
 def get_tile_zcatalog(
@@ -231,10 +234,9 @@ def get_target_zcatalog(
 
     # Check for missing IDs
     missing_ids = []
-    found_ids = set(zcatalog["TARGETID"])
-    for i in target_ids:
-        if i not in found_ids:
-            missing_ids.append(i)
+    if len(target_ids):
+        found_ids = set(zcatalog["TARGETID"])
+        missing_ids = [i for i in target_ids if i not in found_ids]
     if len(missing_ids):
         raise DataNotFoundException("unable to find targets:", target_ids)
     return filter_zcatalog(zcatalog, filters)
@@ -266,7 +268,7 @@ def unfiltered_zcatalog(
         or desired_columns == DESIRED_COLUMNS_TILE
     ):
         log("checking preloaded fits")
-        preloaded_fits = memmap.preload_fits()
+        preloaded_fits = preload_fits(PRELOAD_RELEASES)
         log("preload accessed")
         if fits_file in preloaded_fits.keys():
             log("used preloaded fits")
@@ -363,6 +365,20 @@ def clause_from_filter(key: str, value: str, targets: Zcatalog) -> Clause:
     return func(targets[key], value)
 
 
+def table_shape(table: np.ndarray | Table):
+    """A generalisation of array.shape that also works on astropy tables. Returns a tuple (rows, columns)
+
+    :param table:
+    :returns:
+
+    """
+
+    if isinstance(table, np.ndarray):
+        return table.shape
+    elif isinstance(table, Table):
+        return (len(table), len(table.columns))
+
+
 def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
     """Given a collection of FILTERS of the form {column_name: "<test><value>"}, filter the ZCAT to only include records which satisfy all of those filters and return that filtered copy.
 
@@ -372,9 +388,11 @@ def filter_zcatalog(zcatalog: Zcatalog, filters: Filter) -> Zcatalog:
 
     """
     # Speed trick for when there are no filters
-    if filters == dict():
+    log("filtering zcat")
+    if len(filters)==0:
+        log("skipped filter")
         return zcatalog
-    filtered_keep = np.full(zcatalog.shape, True, dtype=bool)
+    filtered_keep = np.full(table_shape(zcatalog), True, dtype=bool)
     for k, v in filters.items():
         if k in SPECIAL_QUERY_PARAMS:
             pass
@@ -396,3 +414,29 @@ def sort_zcat(zcat: Zcatalog, target_ids: Zcatalog) -> Zcatalog:
     sorted_input = np.argsort(target_ids)
     # zcat->sorted, and then reverse input->sorted, so we end up with zcat->sorted->input
     return zcat[sorted_zcat][invert(sorted_input)]
+
+
+@lru_cache(maxsize=1)
+def preload_fits(release_names: Tuple[str]) -> Dict:
+    """Find the Zcatalog fits files for each release, read them into numpy arrays, and reutrn a mapping of filenames to arrays. Intended to be called once on startup, and future calls use the cache instead of reading the files each time.
+
+    :param release_names: A list of releases to read Zcat metadata for
+    :returns: A dict mapping fits file names to ndarrays
+
+    """
+    preloads = dict()
+    for r in release_names:
+        log("reading fits for:", r)
+        try:
+            release = DataRelease(r)
+            log(release.healpix_fits)
+            log(release.tile_fits)
+            preloads[release.healpix_fits] = fitsio.read(
+                release.healpix_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TARGET
+            )
+            preloads[release.tile_fits] = fitsio.read(
+                release.tile_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TILE
+            )
+        except Exception as e:
+            log(e)
+    return preloads

@@ -7,7 +7,7 @@ from typing import List
 from flask import Flask, Response, abort, redirect, request, send_file
 from json import loads
 
-from ..convert.memmap import preload_fits
+from ..common.build_spectra import preload_fits
 
 from ..common.errors import DesiApiException, MalformedRequestException
 from ..common.models import *
@@ -281,8 +281,5 @@ def run_app(config: dict):
     """
     app.config.update(config)
     # Doesn't save the results anywhere, but calling it should cause the value to be cached if functools does its job
-    preloads = app.config["preload_releases"]
-    log(preloads)
-    log(len(tuple(preloads)))
-    preload_fits(tuple(preloads))
-    app.run(host="0.0.0", debug=True)
+    preload_fits(PRELOAD_RELEASES) # FIXME should use app.config preloads, not constant. But then the later calls don't match, and cause a re-run which takes forever
+    app.run(host="0.0.0", debug=True, use_reloader=False)

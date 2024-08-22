@@ -207,10 +207,10 @@ zcat_plot_endpoints = [
 ]
 
 filter_endpoints = [
-    # "spectra/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
+    "spectra/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
     "zcat/download/fujilite/radec/210.9,24.8,180?healpix=>8939",
     "zcat/download/fujilite/tile/80858/600,900,1000?fiber=<950",
-    # "zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
+    "zcat/plot/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
     "zcat/download/fujilite/targets/39628368387245557,39628368404022902?survey==sv2",
 ]
 
@@ -235,5 +235,5 @@ if __name__ == "__main__":
     # test_fujilite(cursed_endpoints)
     test_fujilite(fujilite_endpoints)
     test_fujilite(zcat_plot_endpoints)
-# test_fujilite(filter_endpoints)
+    test_fujilite(filter_endpoints)
 # test_post_targets()

@@ -3,7 +3,6 @@ import datetime as dt
 import numpy as np
 import pickle
 from typing import Tuple, Dict
-from functools import lru_cache
 
 
 from ..common.models import (
@@ -57,33 +56,6 @@ def read_memmap(numpy_file: str, dtype_file: str) -> Zcatalog:
         dtype = pickle.load(f)
     read = np.memmap(numpy_file, mode="r", dtype=dtype)
     return read
-
-
-
-# TODO move this
-@lru_cache(maxsize=1)
-def preload_fits(release_names: Tuple[str]) -> Dict:
-    """Find the Zcatalog fits files for each release, read them into numpy arrays, and reutrn a mapping of filenames to arrays. Intended to be called once on startup, and future calls use the cache instead of reading the files each time.
-
-    :param release_names: A list of releases to read Zcat metadata for
-    :returns: A dict mapping fits file names to ndarrays
-
-    """
-
-    preloads = dict()
-    for r in release_names:
-        log("reading fits for:", r)
-        try:
-            release = DataRelease(r)
-            log(release.healpix_fits)
-            log(release.tile_fits)
-            preloads[release.healpix_fits] = fitsio.read(
-                release.healpix_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TARGET
-            )
-            preloads[release.tile_fits] = fitsio.read(release.tile_fits, "ZCATALOG", columns=DESIRED_COLUMNS_TILE)
-        except Exception as e:
-            log(e)
-    return preloads
 
 
 def main():

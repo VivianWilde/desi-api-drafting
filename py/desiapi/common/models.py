@@ -26,9 +26,9 @@ Spectra = DesiSpectra
 
 PRELOAD_RELEASES = ("fujilite", "jura", "iron")
 # PRELOAD_RELEASES = ("fujilite",)
-MEMMAP_DIR = os.path.expandvars("$SCRATCH/memmap") # FIXME shouldn't be scratch
-HDF5_DIR = os.path.expandvars("$SCRATCH/hdf5")
-DTYPES_DIR = os.path.expandvars("$SCRATCH/dtypes")
+MEMMAP_DIR = os.path.expandvars("$DESI_API_INTERMEDIATE/memmap")
+HDF5_DIR = os.path.expandvars("$DESI_API_INTERMEDIATE/hdf5")
+DTYPES_DIR = os.path.expandvars("$DESI_API_INTERMEDIATE/dtypes")
 SPECTRO_REDUX = os.getenv("DESI_SPECTRO_REDUX")
 # CACHE = "/cache" # Where we mount cache
 DEFAULT_CONF = "/config/default.toml"
